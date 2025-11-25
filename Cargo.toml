@@ -1,0 +1,54 @@
+[package]
+name = "rust-yt-downloader"
+version = "0.1.0"
+edition = "2021"
+authors = ["Guilherme Arantes Canella <guycanella@gmail.com>"]
+description = "A professional CLI tool for downloading YouTube videos"
+license = "MIT"
+repository = "https://github.com/seu-usuario/rust-yt-downloader"
+keywords = ["youtube", "downloader", "cli", "video", "audio"]
+categories = ["command-line-utilities", "multimedia"]
+rust-version = "1.75.0"
+
+[dependencies]
+# CLI & User Interface
+clap = { version = "4.5", features = ["derive", "cargo"] }
+indicatif = "0.17"
+colored = "2.1"
+
+# Async Runtime & Networking
+tokio = { version = "1.40", features = ["full"] }
+reqwest = { version = "0.12", features = ["stream", "json"] }
+futures = "0.3"
+
+# YouTube Integration
+rustube = "0.6"
+
+# Serialization & Configuration
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+toml = "0.8"
+
+# Error Handling
+anyhow = "1.0"
+thiserror = "1.0"
+
+# Utilities
+chrono = "0.4"
+regex = "1.10"
+dirs = "5.0"
+
+[dev-dependencies]
+tokio-test = "0.4"
+tempfile = "3.12"
+mockito = "1.5"
+
+[[bin]]
+name = "ytdl"
+path = "src/main.rs"
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+strip = true

@@ -1,0 +1,38 @@
+# Rust / Cargo
+/target/
+**/*.rs.bk
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Project specific
+/downloads/
+/output/
+*.mp4
+*.mp3
+*.webm
+*.mkv
+*.m4a
+*.flac
+*.wav
+*.srt
+*.vtt
+
+# Config local (o usuário pode ter senhas/tokens)
+config.local.toml
+
+# Logs
+*.log
+logs/
+
+# Test artifacts
+/tmp/
+*.tmp
