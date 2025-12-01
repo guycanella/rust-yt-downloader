@@ -2,6 +2,7 @@ mod config;
 mod error;
 mod cli;
 mod utils;
+mod progress;
 
 use clap::Parser;
 use cli::Cli;
