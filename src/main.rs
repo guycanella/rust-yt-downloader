@@ -3,6 +3,7 @@ mod error;
 mod cli;
 mod utils;
 mod progress;
+mod youtube;
 
 use clap::Parser;
 use cli::Cli;
