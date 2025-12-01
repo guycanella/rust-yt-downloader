@@ -153,7 +153,6 @@ mod tests {
     #[test]
     fn test_download_style_creation() {
         let style = ProgressStyles::download();
-        // Se não der panic, o estilo foi criado com sucesso
         assert!(true);
     }
 
@@ -185,14 +184,13 @@ mod tests {
 
     #[test]
     fn test_download_progress_new_large_size() {
-        let progress = DownloadProgress::new(1024 * 1024 * 1024); // 1 GB
+        let progress = DownloadProgress::new(1024 * 1024 * 1024);
         assert_eq!(progress.bar.length(), Some(1024 * 1024 * 1024));
     }
 
     #[test]
     fn test_download_progress_new_spinner() {
         let progress = DownloadProgress::new_spinner("Loading...");
-        // Spinner não tem tamanho definido
         assert!(progress.bar.length().is_none());
     }
 
@@ -244,7 +242,6 @@ mod tests {
     fn test_download_progress_set_message() {
         let progress = DownloadProgress::new(100);
         progress.set_message("Downloading video.mp4");
-        // Não há getter público para mensagem, mas não deve dar panic
         assert!(true);
     }
 
@@ -325,7 +322,6 @@ mod tests {
     #[test]
     fn test_multi_download_progress_new() {
         let multi = MultiDownloadProgress::new();
-        // Se criou sem panic, está ok
         assert!(true);
     }
 
@@ -404,12 +400,10 @@ mod tests {
     fn test_multi_download_progress_workflow() {
         let multi = MultiDownloadProgress::new();
 
-        // Simula download de 3 arquivos em paralelo
         let video1 = multi.add_download(1000);
         let video2 = multi.add_download(2000);
         let video3 = multi.add_download(1500);
 
-        // Progresso parcial
         video1.inc(500);
         video2.inc(1000);
         video3.inc(750);
@@ -418,26 +412,20 @@ mod tests {
         assert_eq!(video2.bar.position(), 1000);
         assert_eq!(video3.bar.position(), 750);
 
-        // Video 1 termina primeiro
         video1.set_position(1000);
         video1.finish_with_message("video1.mp4 ✓");
         assert!(video1.bar.is_finished());
 
-        // Video 3 termina
         video3.set_position(1500);
         video3.finish_with_message("video3.mp4 ✓");
         assert!(video3.bar.is_finished());
 
-        // Video 2 termina por último
         video2.set_position(2000);
         video2.finish_with_message("video2.mp4 ✓");
         assert!(video2.bar.is_finished());
     }
 
     // ============== Messages Module Tests ==============
-
-    // Nota: Os testes de mensagens apenas verificam que não há panic,
-    // já que a saída vai para stdout/stderr
 
     #[test]
     fn test_messages_success() {
@@ -514,7 +502,7 @@ mod tests {
 
     #[test]
     fn test_progress_large_increments() {
-        let progress = DownloadProgress::new(1_000_000_000); // 1 bilhão
+        let progress = DownloadProgress::new(1_000_000_000);
 
         progress.inc(500_000_000);
         assert_eq!(progress.bar.position(), 500_000_000);
