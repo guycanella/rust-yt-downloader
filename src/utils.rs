@@ -135,3 +135,627 @@ pub fn apply_template(template: &str, meta: &VideoMetadata) -> String {
 
     filename
 }
+
+// ==================================================
+//          UNITARY TESTS
+// ==================================================
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use chrono::TimeZone;
+
+    // ============== sanitize_filename Tests ==============
+
+    #[test]
+    fn test_sanitize_filename_simple() {
+        let result = sanitize_filename("my video");
+        assert_eq!(result, "my video");
+    }
+
+    #[test]
+    fn test_sanitize_filename_with_extension() {
+        let result = sanitize_filename("my video.mp4");
+        assert_eq!(result, "my video.mp4");
+    }
+
+    #[test]
+    fn test_sanitize_filename_removes_slashes() {
+        let result = sanitize_filename("my/video/name");
+        assert_eq!(result, "my_video_name");
+    }
+
+    #[test]
+    fn test_sanitize_filename_removes_backslashes() {
+        let result = sanitize_filename("my\\video\\name");
+        assert_eq!(result, "my_video_name");
+    }
+
+    #[test]
+    fn test_sanitize_filename_removes_colons() {
+        let result = sanitize_filename("video: the sequel");
+        assert_eq!(result, "video_ the sequel");
+    }
+
+    #[test]
+    fn test_sanitize_filename_removes_asterisks() {
+        let result = sanitize_filename("video*name");
+        assert_eq!(result, "video_name");
+    }
+
+    #[test]
+    fn test_sanitize_filename_removes_question_marks() {
+        let result = sanitize_filename("what is this?");
+        assert_eq!(result, "what is this");
+    }
+
+    #[test]
+    fn test_sanitize_filename_removes_quotes() {
+        let result = sanitize_filename("video \"title\"");
+        assert_eq!(result, "video _title");
+    }
+
+    #[test]
+    fn test_sanitize_filename_removes_angle_brackets() {
+        let result = sanitize_filename("video <title>");
+        assert_eq!(result, "video _title");
+    }
+
+    #[test]
+    fn test_sanitize_filename_removes_pipe() {
+        let result = sanitize_filename("video|name");
+        assert_eq!(result, "video_name");
+    }
+
+    #[test]
+    fn test_sanitize_filename_keeps_hyphens() {
+        let result = sanitize_filename("my-video-name");
+        assert_eq!(result, "my-video-name");
+    }
+
+    #[test]
+    fn test_sanitize_filename_keeps_underscores() {
+        let result = sanitize_filename("my_video_name");
+        assert_eq!(result, "my_video_name");
+    }
+
+    #[test]
+    fn test_sanitize_filename_keeps_dots() {
+        let result = sanitize_filename("video.2024.final.mp4");
+        assert_eq!(result, "video.2024.final.mp4");
+    }
+
+    #[test]
+    fn test_sanitize_filename_removes_multiple_invalid_chars() {
+        let result = sanitize_filename("video:/\\*?name");
+        assert_eq!(result, "video_name");
+    }
+
+    #[test]
+    fn test_sanitize_filename_collapses_multiple_underscores() {
+        let result = sanitize_filename("video///name");
+        assert_eq!(result, "video_name");
+    }
+
+    #[test]
+    fn test_sanitize_filename_with_unicode() {
+        let result = sanitize_filename("vídeo música");
+        assert_eq!(result, "vídeo música");
+    }
+
+    #[test]
+    fn test_sanitize_filename_empty_string() {
+        let result = sanitize_filename("");
+        assert_eq!(result, "");
+    }
+
+    #[test]
+    fn test_sanitize_filename_only_invalid_chars() {
+        let result = sanitize_filename("///\\\\:::");
+        assert_eq!(result, "");
+    }
+
+    // ============== expand_path Tests ==============
+
+    #[test]
+    fn test_expand_path_no_tilde() {
+        let result = expand_path("/absolute/path");
+        assert_eq!(result, PathBuf::from("/absolute/path"));
+    }
+
+    #[test]
+    fn test_expand_path_relative() {
+        let result = expand_path("relative/path");
+        assert_eq!(result, PathBuf::from("relative/path"));
+    }
+
+    #[test]
+    fn test_expand_path_current_dir() {
+        let result = expand_path(".");
+        assert_eq!(result, PathBuf::from("."));
+    }
+
+    #[test]
+    fn test_expand_path_tilde_only() {
+        let result = expand_path("~");
+        if let Some(home) = dirs::home_dir() {
+            assert_eq!(result, home);
+        }
+    }
+
+    #[test]
+    fn test_expand_path_tilde_with_subdir() {
+        let result = expand_path("~/Downloads");
+        if let Some(home) = dirs::home_dir() {
+            assert_eq!(result, home.join("Downloads"));
+        }
+    }
+
+    #[test]
+    fn test_expand_path_tilde_with_nested_subdirs() {
+        let result = expand_path("~/Documents/videos/youtube");
+        if let Some(home) = dirs::home_dir() {
+            assert_eq!(result, home.join("Documents/videos/youtube"));
+        }
+    }
+
+    #[test]
+    fn test_expand_path_tilde_in_middle_not_expanded() {
+        let result = expand_path("/path/~/something");
+        assert_eq!(result, PathBuf::from("/path/~/something"));
+    }
+
+    // ============== format_bytes Tests ==============
+
+    #[test]
+    fn test_format_bytes_zero() {
+        let result = format_bytes(0);
+        assert_eq!(result, "0 B");
+    }
+
+    #[test]
+    fn test_format_bytes_bytes() {
+        let result = format_bytes(500);
+        assert_eq!(result, "500 B");
+    }
+
+    #[test]
+    fn test_format_bytes_one_kb() {
+        let result = format_bytes(1024);
+        assert_eq!(result, "1.00 KB");
+    }
+
+    #[test]
+    fn test_format_bytes_kilobytes() {
+        let result = format_bytes(1536);
+        assert_eq!(result, "1.50 KB");
+    }
+
+    #[test]
+    fn test_format_bytes_one_mb() {
+        let result = format_bytes(1024 * 1024);
+        assert_eq!(result, "1.00 MB");
+    }
+
+    #[test]
+    fn test_format_bytes_megabytes() {
+        let result = format_bytes(1024 * 1024 * 5);
+        assert_eq!(result, "5.00 MB");
+    }
+
+    #[test]
+    fn test_format_bytes_one_gb() {
+        let result = format_bytes(1024 * 1024 * 1024);
+        assert_eq!(result, "1.00 GB");
+    }
+
+    #[test]
+    fn test_format_bytes_gigabytes() {
+        let result = format_bytes(1024 * 1024 * 1024 * 2);
+        assert_eq!(result, "2.00 GB");
+    }
+
+    #[test]
+    fn test_format_bytes_one_tb() {
+        let result = format_bytes(1024_u64 * 1024 * 1024 * 1024);
+        assert_eq!(result, "1.00 TB");
+    }
+
+    #[test]
+    fn test_format_bytes_fractional() {
+        let result = format_bytes(1024 + 512);
+        assert_eq!(result, "1.50 KB");
+    }
+
+    // ============== format_duration Tests ==============
+
+    #[test]
+    fn test_format_duration_zero() {
+        let result = format_duration(0);
+        assert_eq!(result, "00:00:00");
+    }
+
+    #[test]
+    fn test_format_duration_seconds_only() {
+        let result = format_duration(45);
+        assert_eq!(result, "00:00:45");
+    }
+
+    #[test]
+    fn test_format_duration_one_minute() {
+        let result = format_duration(60);
+        assert_eq!(result, "00:01:00");
+    }
+
+    #[test]
+    fn test_format_duration_minutes_and_seconds() {
+        let result = format_duration(125);
+        assert_eq!(result, "00:02:05");
+    }
+
+    #[test]
+    fn test_format_duration_one_hour() {
+        let result = format_duration(3600);
+        assert_eq!(result, "01:00:00");
+    }
+
+    #[test]
+    fn test_format_duration_hours_minutes_seconds() {
+        let result = format_duration(3661);
+        assert_eq!(result, "01:01:01");
+    }
+
+    #[test]
+    fn test_format_duration_large_value() {
+        let result = format_duration(86400); // 24 hours
+        assert_eq!(result, "24:00:00");
+    }
+
+    #[test]
+    fn test_format_duration_complex() {
+        let result = format_duration(7384); // 2:03:04
+        assert_eq!(result, "02:03:04");
+    }
+
+    // ============== parse_duration Tests ==============
+
+    #[test]
+    fn test_parse_duration_seconds_only() {
+        let result = parse_duration("45").unwrap();
+        assert_eq!(result, 45);
+    }
+
+    #[test]
+    fn test_parse_duration_minutes_seconds() {
+        let result = parse_duration("02:30").unwrap();
+        assert_eq!(result, 150);
+    }
+
+    #[test]
+    fn test_parse_duration_hours_minutes_seconds() {
+        let result = parse_duration("01:30:45").unwrap();
+        assert_eq!(result, 5445);
+    }
+
+    #[test]
+    fn test_parse_duration_zero() {
+        let result = parse_duration("0").unwrap();
+        assert_eq!(result, 0);
+    }
+
+    #[test]
+    fn test_parse_duration_zero_padded() {
+        let result = parse_duration("00:00:00").unwrap();
+        assert_eq!(result, 0);
+    }
+
+    #[test]
+    fn test_parse_duration_large_hours() {
+        let result = parse_duration("100:00:00").unwrap();
+        assert_eq!(result, 360000);
+    }
+
+    #[test]
+    fn test_parse_duration_invalid_format() {
+        let result = parse_duration("not:a:number:here");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_parse_duration_invalid_characters() {
+        let result = parse_duration("ab:cd:ef");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_parse_duration_empty_string() {
+        let result = parse_duration("");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_parse_duration_partial_invalid() {
+        let result = parse_duration("10:ab");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_parse_duration_roundtrip() {
+        let original = 7384_u64;
+        let formatted = format_duration(original);
+        let parsed = parse_duration(&formatted).unwrap();
+        assert_eq!(original, parsed);
+    }
+
+    // ============== extract_video_id Tests ==============
+
+    #[test]
+    fn test_extract_video_id_standard_url() {
+        let result = extract_video_id("https://www.youtube.com/watch?v=dQw4w9WgXcQ");
+        assert_eq!(result, Some("dQw4w9WgXcQ".to_string()));
+    }
+
+    #[test]
+    fn test_extract_video_id_without_www() {
+        let result = extract_video_id("https://youtube.com/watch?v=dQw4w9WgXcQ");
+        assert_eq!(result, Some("dQw4w9WgXcQ".to_string()));
+    }
+
+    #[test]
+    fn test_extract_video_id_short_url() {
+        let result = extract_video_id("https://youtu.be/dQw4w9WgXcQ");
+        assert_eq!(result, Some("dQw4w9WgXcQ".to_string()));
+    }
+
+    #[test]
+    fn test_extract_video_id_embed_url() {
+        let result = extract_video_id("https://www.youtube.com/embed/dQw4w9WgXcQ");
+        assert_eq!(result, Some("dQw4w9WgXcQ".to_string()));
+    }
+
+    #[test]
+    fn test_extract_video_id_with_extra_params() {
+        let result =
+            extract_video_id("https://www.youtube.com/watch?v=dQw4w9WgXcQ&list=PLrAXtmErZgOeiKm4sgNOknGvNjby9efdf");
+        assert_eq!(result, Some("dQw4w9WgXcQ".to_string()));
+    }
+
+    #[test]
+    fn test_extract_video_id_with_timestamp() {
+        let result = extract_video_id("https://www.youtube.com/watch?v=dQw4w9WgXcQ&t=120");
+        assert_eq!(result, Some("dQw4w9WgXcQ".to_string()));
+    }
+
+    #[test]
+    fn test_extract_video_id_short_url_with_params() {
+        let result = extract_video_id("https://youtu.be/dQw4w9WgXcQ?t=120");
+        assert_eq!(result, Some("dQw4w9WgXcQ".to_string()));
+    }
+
+    #[test]
+    fn test_extract_video_id_invalid_url() {
+        let result = extract_video_id("not a url");
+        assert!(result.is_none());
+    }
+
+    #[test]
+    fn test_extract_video_id_wrong_domain() {
+        let result = extract_video_id("https://vimeo.com/123456789");
+        assert!(result.is_none());
+    }
+
+    #[test]
+    fn test_extract_video_id_no_video_param() {
+        let result = extract_video_id("https://www.youtube.com/");
+        assert!(result.is_none());
+    }
+
+    #[test]
+    fn test_extract_video_id_empty_string() {
+        let result = extract_video_id("");
+        assert!(result.is_none());
+    }
+
+    // ============== extract_playlist_id Tests ==============
+
+    #[test]
+    fn test_extract_playlist_id_standard_url() {
+        let result =
+            extract_playlist_id("https://www.youtube.com/playlist?list=PLrAXtmErZgOeiKm4sgNOknGvNjby9efdf");
+        assert_eq!(result, Some("PLrAXtmErZgOeiKm4sgNOknGvNjby9efdf".to_string()));
+    }
+
+    #[test]
+    fn test_extract_playlist_id_from_video_url() {
+        let result = extract_playlist_id(
+            "https://www.youtube.com/watch?v=dQw4w9WgXcQ&list=PLrAXtmErZgOeiKm4sgNOknGvNjby9efdf",
+        );
+        assert_eq!(result, Some("PLrAXtmErZgOeiKm4sgNOknGvNjby9efdf".to_string()));
+    }
+
+    #[test]
+    fn test_extract_playlist_id_no_list_param() {
+        let result = extract_playlist_id("https://www.youtube.com/watch?v=dQw4w9WgXcQ");
+        assert!(result.is_none());
+    }
+
+    #[test]
+    fn test_extract_playlist_id_invalid_url() {
+        let result = extract_playlist_id("not a url");
+        assert!(result.is_none());
+    }
+
+    #[test]
+    fn test_extract_playlist_id_empty_string() {
+        let result = extract_playlist_id("");
+        assert!(result.is_none());
+    }
+
+    // ============== apply_template Tests ==============
+
+    #[test]
+    fn test_apply_template_title_only() {
+        let meta = VideoMetadata {
+            title: "My Video",
+            id: "abc123",
+            date: None,
+            duration: None,
+        };
+
+        let result = apply_template("{title}", &meta);
+        assert_eq!(result, "My Video");
+    }
+
+    #[test]
+    fn test_apply_template_id_only() {
+        let meta = VideoMetadata {
+            title: "My Video",
+            id: "abc123",
+            date: None,
+            duration: None,
+        };
+
+        let result = apply_template("{id}", &meta);
+        assert_eq!(result, "abc123");
+    }
+
+    #[test]
+    fn test_apply_template_title_and_id() {
+        let meta = VideoMetadata {
+            title: "My Video",
+            id: "abc123",
+            date: None,
+            duration: None,
+        };
+
+        let result = apply_template("{title}-{id}", &meta);
+        assert_eq!(result, "My Video-abc123");
+    }
+
+    #[test]
+    fn test_apply_template_with_date() {
+        let date = Utc.with_ymd_and_hms(2024, 6, 15, 0, 0, 0).unwrap();
+        let meta = VideoMetadata {
+            title: "My Video",
+            id: "abc123",
+            date: Some(date),
+            duration: None,
+        };
+
+        let result = apply_template("{title}-{date}", &meta);
+        assert_eq!(result, "My Video-2024-06-15");
+    }
+
+    #[test]
+    fn test_apply_template_with_duration() {
+        let meta = VideoMetadata {
+            title: "My Video",
+            id: "abc123",
+            date: None,
+            duration: Some("10:30"),
+        };
+
+        let result = apply_template("{title}-{duration}", &meta);
+        assert_eq!(result, "My Video-10:30");
+    }
+
+    #[test]
+    fn test_apply_template_full() {
+        let date = Utc.with_ymd_and_hms(2024, 6, 15, 0, 0, 0).unwrap();
+        let meta = VideoMetadata {
+            title: "My Video",
+            id: "abc123",
+            date: Some(date),
+            duration: Some("10:30"),
+        };
+
+        let result = apply_template("{title}-{id}-{date}-{duration}", &meta);
+        assert_eq!(result, "My Video-abc123-2024-06-15-10:30");
+    }
+
+    #[test]
+    fn test_apply_template_sanitizes_title() {
+        let meta = VideoMetadata {
+            title: "My: Video? Name",
+            id: "abc123",
+            date: None,
+            duration: None,
+        };
+    
+        let result = apply_template("{title}", &meta);
+        assert_eq!(result, "My_ Video_ Name");
+    }
+
+    #[test]
+    fn test_apply_template_no_placeholders() {
+        let meta = VideoMetadata {
+            title: "My Video",
+            id: "abc123",
+            date: None,
+            duration: None,
+        };
+
+        let result = apply_template("static_name", &meta);
+        assert_eq!(result, "static_name");
+    }
+
+    #[test]
+    fn test_apply_template_missing_duration() {
+        let meta = VideoMetadata {
+            title: "My Video",
+            id: "abc123",
+            date: None,
+            duration: None,
+        };
+
+        let result = apply_template("{title}-{duration}", &meta);
+        assert_eq!(result, "My Video-");
+    }
+
+    #[test]
+    fn test_apply_template_uses_current_date_when_none() {
+        let meta = VideoMetadata {
+            title: "My Video",
+            id: "abc123",
+            date: None,
+            duration: None,
+        };
+
+        let result = apply_template("{date}", &meta);
+        let today = Utc::now().format("%Y-%m-%d").to_string();
+        assert_eq!(result, today);
+    }
+
+    // ============== VideoMetadata Tests ==============
+
+    #[test]
+    fn test_video_metadata_creation() {
+        let meta = VideoMetadata {
+            title: "Test Title",
+            id: "test123",
+            date: None,
+            duration: Some("05:30"),
+        };
+
+        assert_eq!(meta.title, "Test Title");
+        assert_eq!(meta.id, "test123");
+        assert!(meta.date.is_none());
+        assert_eq!(meta.duration, Some("05:30"));
+    }
+
+    #[test]
+    fn test_video_metadata_with_all_fields() {
+        let date = Utc.with_ymd_and_hms(2024, 1, 1, 0, 0, 0).unwrap();
+        let meta = VideoMetadata {
+            title: "Full Video",
+            id: "full123",
+            date: Some(date),
+            duration: Some("01:30:00"),
+        };
+
+        assert_eq!(meta.title, "Full Video");
+        assert_eq!(meta.id, "full123");
+        assert!(meta.date.is_some());
+        assert_eq!(meta.duration, Some("01:30:00"));
+    }
+}
