@@ -1,4 +1,4 @@
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use reqwest::Url;
 use chrono::{DateTime, Utc};
 
@@ -72,8 +72,8 @@ pub fn parse_duration(seconds: &str) -> AppResult<u64> {
     let parts: Vec<&str> = seconds.split(':').collect();
 
     let parse_part = |s: &str| -> AppResult<u64> {
-        s.parse().map_err(|_| AppError::InvalidTimeFormat(input.to_string()))
-    }
+        s.parse().map_err(|_| AppError::InvalidTimeFormat(seconds.to_string()))
+    };
 
     match parts.len() {
         3 => {
@@ -87,7 +87,10 @@ pub fn parse_duration(seconds: &str) -> AppResult<u64> {
             let seconds = parse_part(parts[1])?;
             Ok(minutes * 60 + seconds)
         }
-        1 => parse_part(parts[0])?,
+        1 => {
+            let seconds = parse_part(parts[0])?;
+            Ok(seconds)
+        }
         _ => Err(AppError::InvalidTimeFormat(seconds.to_string())),
     }
 }
