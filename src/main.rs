@@ -1,8 +1,9 @@
-mod config;
-mod error;
 mod cli;
-mod utils;
+mod config;
+mod downloader;
+mod error;
 mod progress;
+mod utils;
 mod youtube;
 
 use clap::Parser;
