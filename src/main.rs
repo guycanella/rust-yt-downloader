@@ -2,13 +2,13 @@ mod cli;
 mod config;
 mod downloader;
 mod error;
+mod media;
 mod progress;
 mod utils;
 mod youtube;
 
 use clap::Parser;
 use cli::Cli;
-use error::{AppError, AppResult};
 
 fn main() {
     let cli = Cli::parse();
