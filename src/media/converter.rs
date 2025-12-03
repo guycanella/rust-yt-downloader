@@ -280,3 +280,660 @@ pub struct ConversionResult {
     pub format: VideoFormat,
     pub used_stream_copy: bool,
 }
+
+// ==================================================
+//          UNITARY TESTS
+// ==================================================
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // ============== VideoFormat Extension Tests ==============
+
+    #[test]
+    fn test_video_format_extension_mp4() {
+        assert_eq!(VideoFormat::Mp4.extension(), "mp4");
+    }
+
+    #[test]
+    fn test_video_format_extension_mkv() {
+        assert_eq!(VideoFormat::Mkv.extension(), "mkv");
+    }
+
+    #[test]
+    fn test_video_format_extension_webm() {
+        assert_eq!(VideoFormat::Webm.extension(), "webm");
+    }
+
+    #[test]
+    fn test_video_format_extension_avi() {
+        assert_eq!(VideoFormat::Avi.extension(), "avi");
+    }
+
+    #[test]
+    fn test_video_format_extension_mov() {
+        assert_eq!(VideoFormat::Mov.extension(), "mov");
+    }
+
+    // ============== VideoFormat from_extension Tests ==============
+
+    #[test]
+    fn test_video_format_from_extension_mp4() {
+        assert_eq!(VideoFormat::from_extension("mp4"), Some(VideoFormat::Mp4));
+    }
+
+    #[test]
+    fn test_video_format_from_extension_mkv() {
+        assert_eq!(VideoFormat::from_extension("mkv"), Some(VideoFormat::Mkv));
+    }
+
+    #[test]
+    fn test_video_format_from_extension_webm() {
+        assert_eq!(VideoFormat::from_extension("webm"), Some(VideoFormat::Webm));
+    }
+
+    #[test]
+    fn test_video_format_from_extension_avi() {
+        assert_eq!(VideoFormat::from_extension("avi"), Some(VideoFormat::Avi));
+    }
+
+    #[test]
+    fn test_video_format_from_extension_mov() {
+        assert_eq!(VideoFormat::from_extension("mov"), Some(VideoFormat::Mov));
+    }
+
+    #[test]
+    fn test_video_format_from_extension_unknown() {
+        assert_eq!(VideoFormat::from_extension("xyz"), None);
+    }
+
+    #[test]
+    fn test_video_format_from_extension_empty() {
+        assert_eq!(VideoFormat::from_extension(""), None);
+    }
+
+    #[test]
+    fn test_video_format_from_extension_case_insensitive() {
+        assert_eq!(VideoFormat::from_extension("MP4"), Some(VideoFormat::Mp4));
+        assert_eq!(VideoFormat::from_extension("MKV"), Some(VideoFormat::Mkv));
+        assert_eq!(VideoFormat::from_extension("WebM"), Some(VideoFormat::Webm));
+    }
+
+    // ============== VideoFormat Codec Tests ==============
+
+    #[test]
+    fn test_video_format_recommended_video_codec_mp4() {
+        assert_eq!(VideoFormat::Mp4.recommended_video_codec(), "libx264");
+    }
+
+    #[test]
+    fn test_video_format_recommended_video_codec_mkv() {
+        assert_eq!(VideoFormat::Mkv.recommended_video_codec(), "libx264");
+    }
+
+    #[test]
+    fn test_video_format_recommended_video_codec_webm() {
+        assert_eq!(VideoFormat::Webm.recommended_video_codec(), "libvpx-vp9");
+    }
+
+    #[test]
+    fn test_video_format_recommended_video_codec_avi() {
+        assert_eq!(VideoFormat::Avi.recommended_video_codec(), "mpeg4");
+    }
+
+    #[test]
+    fn test_video_format_recommended_video_codec_mov() {
+        assert_eq!(VideoFormat::Mov.recommended_video_codec(), "libx264");
+    }
+
+    #[test]
+    fn test_video_format_recommended_audio_codec_mp4() {
+        assert_eq!(VideoFormat::Mp4.recommended_audio_codec(), "aac");
+    }
+
+    #[test]
+    fn test_video_format_recommended_audio_codec_mkv() {
+        assert_eq!(VideoFormat::Mkv.recommended_audio_codec(), "aac");
+    }
+
+    #[test]
+    fn test_video_format_recommended_audio_codec_webm() {
+        assert_eq!(VideoFormat::Webm.recommended_audio_codec(), "libopus");
+    }
+
+    #[test]
+    fn test_video_format_recommended_audio_codec_avi() {
+        assert_eq!(VideoFormat::Avi.recommended_audio_codec(), "mp3");
+    }
+
+    #[test]
+    fn test_video_format_recommended_audio_codec_mov() {
+        assert_eq!(VideoFormat::Mov.recommended_audio_codec(), "aac");
+    }
+
+    // ============== VideoFormat Stream Copy Tests ==============
+
+    #[test]
+    fn test_supports_stream_copy_same_format() {
+        assert!(VideoFormat::Mp4.supports_stream_copy_from(&VideoFormat::Mp4));
+        assert!(VideoFormat::Mkv.supports_stream_copy_from(&VideoFormat::Mkv));
+        assert!(VideoFormat::Webm.supports_stream_copy_from(&VideoFormat::Webm));
+    }
+
+    #[test]
+    fn test_supports_stream_copy_mp4_to_mov() {
+        assert!(VideoFormat::Mov.supports_stream_copy_from(&VideoFormat::Mp4));
+    }
+
+    #[test]
+    fn test_supports_stream_copy_mov_to_mp4() {
+        assert!(VideoFormat::Mp4.supports_stream_copy_from(&VideoFormat::Mov));
+    }
+
+    #[test]
+    fn test_supports_stream_copy_to_mkv() {
+        assert!(VideoFormat::Mkv.supports_stream_copy_from(&VideoFormat::Mp4));
+        assert!(VideoFormat::Mkv.supports_stream_copy_from(&VideoFormat::Webm));
+        assert!(VideoFormat::Mkv.supports_stream_copy_from(&VideoFormat::Avi));
+        assert!(VideoFormat::Mkv.supports_stream_copy_from(&VideoFormat::Mov));
+    }
+
+    #[test]
+    fn test_supports_stream_copy_incompatible() {
+        assert!(!VideoFormat::Webm.supports_stream_copy_from(&VideoFormat::Mp4));
+        assert!(!VideoFormat::Mp4.supports_stream_copy_from(&VideoFormat::Webm));
+        assert!(!VideoFormat::Avi.supports_stream_copy_from(&VideoFormat::Webm));
+    }
+
+    // ============== VideoFormat Equality Tests ==============
+
+    #[test]
+    fn test_video_format_equality() {
+        assert_eq!(VideoFormat::Mp4, VideoFormat::Mp4);
+        assert_ne!(VideoFormat::Mp4, VideoFormat::Mkv);
+    }
+
+    #[test]
+    fn test_video_format_clone() {
+        let format = VideoFormat::Mp4;
+        let cloned = format;
+        assert_eq!(format, cloned);
+    }
+
+    #[test]
+    fn test_video_format_copy() {
+        let format = VideoFormat::Webm;
+        let copied = format;
+        assert_eq!(format, copied);
+    }
+
+    // ============== ConversionOptions Default Tests ==============
+
+    #[test]
+    fn test_conversion_options_default() {
+        let options = ConversionOptions::default();
+
+        assert_eq!(options.output_format, VideoFormat::Mp4);
+        assert!(options.stream_copy);
+        assert!(options.video_codec.is_none());
+        assert!(options.audio_codec.is_none());
+        assert!(options.video_quality.is_none());
+        assert!(options.audio_bitrate.is_none());
+        assert!(options.resolution.is_none());
+        assert!(options.framerate.is_none());
+        assert!(options.overwrite);
+    }
+
+    // ============== ConversionOptions Presets Tests ==============
+
+    #[test]
+    fn test_conversion_options_fast() {
+        let options = ConversionOptions::fast(VideoFormat::Mkv);
+
+        assert_eq!(options.output_format, VideoFormat::Mkv);
+        assert!(options.stream_copy);
+    }
+
+    #[test]
+    fn test_conversion_options_reencode() {
+        let options = ConversionOptions::reencode(VideoFormat::Webm);
+
+        assert_eq!(options.output_format, VideoFormat::Webm);
+        assert!(!options.stream_copy);
+    }
+
+    #[test]
+    fn test_conversion_options_high_quality() {
+        let options = ConversionOptions::high_quality(VideoFormat::Mp4);
+
+        assert_eq!(options.output_format, VideoFormat::Mp4);
+        assert!(!options.stream_copy);
+        assert_eq!(options.video_quality, Some(18));
+        assert_eq!(options.audio_bitrate, Some("320k".to_string()));
+    }
+
+    #[test]
+    fn test_conversion_options_small_file() {
+        let options = ConversionOptions::small_file(VideoFormat::Mp4);
+
+        assert_eq!(options.output_format, VideoFormat::Mp4);
+        assert!(!options.stream_copy);
+        assert_eq!(options.video_quality, Some(28));
+        assert_eq!(options.audio_bitrate, Some("128k".to_string()));
+    }
+
+    // ============== ConversionOptions Builder Tests ==============
+
+    #[test]
+    fn test_conversion_options_with_format() {
+        let options = ConversionOptions::default().with_format(VideoFormat::Webm);
+
+        assert_eq!(options.output_format, VideoFormat::Webm);
+    }
+
+    #[test]
+    fn test_conversion_options_with_stream_copy() {
+        let options = ConversionOptions::default().with_stream_copy(false);
+
+        assert!(!options.stream_copy);
+    }
+
+    #[test]
+    fn test_conversion_options_with_video_codec() {
+        let options = ConversionOptions::default().with_video_codec("libx265");
+
+        assert_eq!(options.video_codec, Some("libx265".to_string()));
+    }
+
+    #[test]
+    fn test_conversion_options_with_audio_codec() {
+        let options = ConversionOptions::default().with_audio_codec("libopus");
+
+        assert_eq!(options.audio_codec, Some("libopus".to_string()));
+    }
+
+    #[test]
+    fn test_conversion_options_with_quality() {
+        let options = ConversionOptions::default().with_quality(23);
+
+        assert_eq!(options.video_quality, Some(23));
+    }
+
+    #[test]
+    fn test_conversion_options_with_audio_bitrate() {
+        let options = ConversionOptions::default().with_audio_bitrate("256k");
+
+        assert_eq!(options.audio_bitrate, Some("256k".to_string()));
+    }
+
+    #[test]
+    fn test_conversion_options_with_resolution() {
+        let options = ConversionOptions::default().with_resolution("1920x1080");
+
+        assert_eq!(options.resolution, Some("1920x1080".to_string()));
+    }
+
+    #[test]
+    fn test_conversion_options_with_framerate() {
+        let options = ConversionOptions::default().with_framerate(60);
+
+        assert_eq!(options.framerate, Some(60));
+    }
+
+    #[test]
+    fn test_conversion_options_builder_chain() {
+        let options = ConversionOptions::default()
+            .with_format(VideoFormat::Mkv)
+            .with_stream_copy(false)
+            .with_video_codec("libx265")
+            .with_audio_codec("aac")
+            .with_quality(20)
+            .with_audio_bitrate("192k")
+            .with_resolution("1280x720")
+            .with_framerate(30);
+
+        assert_eq!(options.output_format, VideoFormat::Mkv);
+        assert!(!options.stream_copy);
+        assert_eq!(options.video_codec, Some("libx265".to_string()));
+        assert_eq!(options.audio_codec, Some("aac".to_string()));
+        assert_eq!(options.video_quality, Some(20));
+        assert_eq!(options.audio_bitrate, Some("192k".to_string()));
+        assert_eq!(options.resolution, Some("1280x720".to_string()));
+        assert_eq!(options.framerate, Some(30));
+    }
+
+    // ============== VideoConverter detect_format Tests ==============
+
+    #[test]
+    fn test_detect_format_mp4() {
+        let format = VideoConverter::detect_format("video.mp4");
+        assert_eq!(format, Some(VideoFormat::Mp4));
+    }
+
+    #[test]
+    fn test_detect_format_mkv() {
+        let format = VideoConverter::detect_format("video.mkv");
+        assert_eq!(format, Some(VideoFormat::Mkv));
+    }
+
+    #[test]
+    fn test_detect_format_webm() {
+        let format = VideoConverter::detect_format("video.webm");
+        assert_eq!(format, Some(VideoFormat::Webm));
+    }
+
+    #[test]
+    fn test_detect_format_avi() {
+        let format = VideoConverter::detect_format("video.avi");
+        assert_eq!(format, Some(VideoFormat::Avi));
+    }
+
+    #[test]
+    fn test_detect_format_mov() {
+        let format = VideoConverter::detect_format("video.mov");
+        assert_eq!(format, Some(VideoFormat::Mov));
+    }
+
+    #[test]
+    fn test_detect_format_unknown() {
+        let format = VideoConverter::detect_format("video.xyz");
+        assert_eq!(format, None);
+    }
+
+    #[test]
+    fn test_detect_format_no_extension() {
+        let format = VideoConverter::detect_format("video");
+        assert_eq!(format, None);
+    }
+
+    #[test]
+    fn test_detect_format_with_path() {
+        let format = VideoConverter::detect_format("/path/to/video.mp4");
+        assert_eq!(format, Some(VideoFormat::Mp4));
+    }
+
+    #[test]
+    fn test_detect_format_pathbuf() {
+        let path = PathBuf::from("/home/user/videos/movie.mkv");
+        let format = VideoConverter::detect_format(&path);
+        assert_eq!(format, Some(VideoFormat::Mkv));
+    }
+
+    // ============== VideoConverter output_path_with_format Tests ==============
+
+    #[test]
+    fn test_output_path_with_format_simple() {
+        let output = VideoConverter::output_path_with_format("video.mp4", VideoFormat::Mkv);
+        assert_eq!(output, PathBuf::from("video.mkv"));
+    }
+
+    #[test]
+    fn test_output_path_with_format_with_path() {
+        let output =
+            VideoConverter::output_path_with_format("/path/to/video.mp4", VideoFormat::Webm);
+        assert_eq!(output, PathBuf::from("/path/to/video.webm"));
+    }
+
+    #[test]
+    fn test_output_path_with_format_same_format() {
+        let output = VideoConverter::output_path_with_format("video.mp4", VideoFormat::Mp4);
+        assert_eq!(output, PathBuf::from("video.mp4"));
+    }
+
+    #[test]
+    fn test_output_path_with_format_different_extensions() {
+        let formats = vec![
+            (VideoFormat::Mp4, "mp4"),
+            (VideoFormat::Mkv, "mkv"),
+            (VideoFormat::Webm, "webm"),
+            (VideoFormat::Avi, "avi"),
+            (VideoFormat::Mov, "mov"),
+        ];
+
+        for (format, expected_ext) in formats {
+            let output = VideoConverter::output_path_with_format("video.xyz", format);
+            assert!(
+                output.to_string_lossy().ends_with(expected_ext),
+                "Expected extension {} for format {:?}",
+                expected_ext,
+                format
+            );
+        }
+    }
+
+    #[test]
+    fn test_output_path_preserves_filename() {
+        let output =
+            VideoConverter::output_path_with_format("my_awesome_video.mp4", VideoFormat::Mkv);
+        assert!(output.to_string_lossy().contains("my_awesome_video"));
+    }
+
+    #[test]
+    fn test_output_path_with_spaces() {
+        let output =
+            VideoConverter::output_path_with_format("my video file.mp4", VideoFormat::Mkv);
+        assert!(output.to_string_lossy().contains("my video file"));
+        assert!(output.to_string_lossy().ends_with(".mkv"));
+    }
+
+    #[test]
+    fn test_output_path_with_unicode() {
+        let output = VideoConverter::output_path_with_format("vídeo_música.mp4", VideoFormat::Mkv);
+        assert!(output.to_string_lossy().contains("vídeo_música"));
+    }
+
+    // ============== VideoConverter needs_reencode Tests ==============
+
+    #[test]
+    fn test_needs_reencode_same_format() {
+        assert!(!VideoConverter::needs_reencode("video.mp4", VideoFormat::Mp4));
+        assert!(!VideoConverter::needs_reencode("video.mkv", VideoFormat::Mkv));
+    }
+
+    #[test]
+    fn test_needs_reencode_to_mkv() {
+        assert!(!VideoConverter::needs_reencode("video.mp4", VideoFormat::Mkv));
+        assert!(!VideoConverter::needs_reencode("video.webm", VideoFormat::Mkv));
+    }
+
+    #[test]
+    fn test_needs_reencode_mp4_to_mov() {
+        assert!(!VideoConverter::needs_reencode("video.mp4", VideoFormat::Mov));
+    }
+
+    #[test]
+    fn test_needs_reencode_mov_to_mp4() {
+        assert!(!VideoConverter::needs_reencode("video.mov", VideoFormat::Mp4));
+    }
+
+    #[test]
+    fn test_needs_reencode_incompatible() {
+        assert!(VideoConverter::needs_reencode("video.mp4", VideoFormat::Webm));
+        assert!(VideoConverter::needs_reencode("video.webm", VideoFormat::Mp4));
+        assert!(VideoConverter::needs_reencode("video.avi", VideoFormat::Webm));
+    }
+
+    #[test]
+    fn test_needs_reencode_unknown_format() {
+        assert!(VideoConverter::needs_reencode("video.xyz", VideoFormat::Mp4));
+    }
+
+    #[test]
+    fn test_needs_reencode_no_extension() {
+        assert!(VideoConverter::needs_reencode("video", VideoFormat::Mp4));
+    }
+
+    // ============== ConversionResult Tests ==============
+
+    #[test]
+    fn test_conversion_result_creation() {
+        let result = ConversionResult {
+            output_path: PathBuf::from("/path/to/output.mkv"),
+            format: VideoFormat::Mkv,
+            used_stream_copy: true,
+        };
+
+        assert_eq!(result.output_path, PathBuf::from("/path/to/output.mkv"));
+        assert_eq!(result.format, VideoFormat::Mkv);
+        assert!(result.used_stream_copy);
+    }
+
+    #[test]
+    fn test_conversion_result_debug() {
+        let result = ConversionResult {
+            output_path: PathBuf::from("output.mp4"),
+            format: VideoFormat::Mp4,
+            used_stream_copy: false,
+        };
+
+        let debug_str = format!("{:?}", result);
+        assert!(debug_str.contains("ConversionResult"));
+        assert!(debug_str.contains("output_path"));
+    }
+
+    // ============== ConversionOptions Clone Tests ==============
+
+    #[test]
+    fn test_conversion_options_clone() {
+        let options = ConversionOptions::high_quality(VideoFormat::Mp4);
+        let cloned = options.clone();
+
+        assert_eq!(options.output_format, cloned.output_format);
+        assert_eq!(options.video_quality, cloned.video_quality);
+        assert_eq!(options.audio_bitrate, cloned.audio_bitrate);
+    }
+
+    #[test]
+    fn test_conversion_options_clone_independent() {
+        let options = ConversionOptions::default();
+        let mut cloned = options.clone();
+
+        cloned.stream_copy = false;
+
+        assert!(options.stream_copy);
+        assert!(!cloned.stream_copy);
+    }
+
+    // ============== Integration Tests (require FFmpeg) ==============
+
+    mod integration {
+        use super::*;
+
+        fn skip_if_no_ffmpeg() -> bool {
+            if !FFmpeg::is_available() {
+                println!("Skipping test: FFmpeg not available");
+                return true;
+            }
+            false
+        }
+
+        #[test]
+        fn test_convert_nonexistent_file() {
+            if skip_if_no_ffmpeg() {
+                return;
+            }
+
+            let options = ConversionOptions::default();
+            let result = VideoConverter::convert(
+                "/nonexistent/input.mp4",
+                "/nonexistent/output.mkv",
+                &options,
+            );
+
+            assert!(result.is_err());
+        }
+
+        #[test]
+        fn test_convert_fast_nonexistent_file() {
+            if skip_if_no_ffmpeg() {
+                return;
+            }
+
+            let result = VideoConverter::convert_fast(
+                "/nonexistent/input.mp4",
+                "/nonexistent/output.mkv",
+            );
+
+            assert!(result.is_err());
+        }
+
+        #[test]
+        fn test_convert_reencode_nonexistent_file() {
+            if skip_if_no_ffmpeg() {
+                return;
+            }
+
+            let result = VideoConverter::convert_reencode(
+                "/nonexistent/input.mp4",
+                "/nonexistent/output.mkv",
+            );
+
+            assert!(result.is_err());
+        }
+    }
+
+    // ============== Edge Cases ==============
+
+    #[test]
+    fn test_video_format_all_variants() {
+        let formats = vec![
+            VideoFormat::Mp4,
+            VideoFormat::Mkv,
+            VideoFormat::Webm,
+            VideoFormat::Avi,
+            VideoFormat::Mov,
+        ];
+
+        for format in formats {
+            assert!(!format.extension().is_empty());
+            assert!(!format.recommended_video_codec().is_empty());
+            assert!(!format.recommended_audio_codec().is_empty());
+        }
+    }
+
+    #[test]
+    fn test_conversion_options_quality_range() {
+        let options_low = ConversionOptions::default().with_quality(0);
+        let options_high = ConversionOptions::default().with_quality(51);
+
+        assert_eq!(options_low.video_quality, Some(0));
+        assert_eq!(options_high.video_quality, Some(51));
+    }
+
+    #[test]
+    fn test_conversion_options_various_bitrates() {
+        let bitrates = vec!["64k", "128k", "192k", "256k", "320k"];
+
+        for bitrate in bitrates {
+            let options = ConversionOptions::default().with_audio_bitrate(bitrate);
+            assert_eq!(options.audio_bitrate, Some(bitrate.to_string()));
+        }
+    }
+
+    #[test]
+    fn test_conversion_options_various_resolutions() {
+        let resolutions = vec![
+            "640x480",
+            "1280x720",
+            "1920x1080",
+            "2560x1440",
+            "3840x2160",
+        ];
+
+        for resolution in resolutions {
+            let options = ConversionOptions::default().with_resolution(resolution);
+            assert_eq!(options.resolution, Some(resolution.to_string()));
+        }
+    }
+
+    #[test]
+    fn test_conversion_options_various_framerates() {
+        let framerates = vec![24, 25, 30, 50, 60, 120];
+
+        for fps in framerates {
+            let options = ConversionOptions::default().with_framerate(fps);
+            assert_eq!(options.framerate, Some(fps));
+        }
+    }
+}
