@@ -8,7 +8,6 @@
 *.swp
 *.swo
 *~
-CLAUDE.md
 
 # OS
 .DS_Store
@@ -37,3 +36,6 @@ logs/
 # Test artifacts
 /tmp/
 *.tmp
+
+# mdBook output
+/docs/book/
