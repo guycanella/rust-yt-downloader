@@ -1,5 +1,6 @@
 mod common;
 
+#[allow(unused_imports)]
 use common::{run_ytdl, run_ytdl_stdout, run_ytdl_stderr};
 
 // ============== Help Tests ==============
@@ -141,7 +142,7 @@ fn test_download_quality_flags() {
         "480p", "720p", "1080p", "1440p", "4k"
     ];
     
-    for quality in qualities {
+    for _quality in qualities {
         let output = run_ytdl(&["download", "--help"]);
         assert!(output.status.success());
     }

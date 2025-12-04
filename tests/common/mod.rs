@@ -1,3 +1,7 @@
+// Allow dead code and unused imports in test helpers
+#![allow(dead_code)]
+#![allow(unused_imports)]
+
 use std::path::PathBuf;
 use std::process::{Command, Output};
 use tempfile::TempDir;

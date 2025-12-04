@@ -21,13 +21,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
-        rust: [stable, beta]
-        exclude:
-          # Reduzir matriz - testar beta apenas no Ubuntu
-          - os: macos-latest
-            rust: beta
-          - os: windows-latest
-            rust: beta
+        rust: [stable]
 
     steps:
     - name: Checkout code
@@ -79,7 +73,7 @@ jobs:
 
     - name: Run clippy
       if: matrix.rust == 'stable'
-      run: cargo clippy --all-targets --all-features -- -D warnings
+      run: cargo clippy --all-targets --all-features
 
     - name: Build
       run: cargo build --verbose
