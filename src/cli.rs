@@ -34,7 +34,7 @@ use clap::{Parser, Subcommand, Args, ValueEnum};
 /// are defined as variants in the [`Commands`] enum.
 #[derive(Parser)]
 #[command(name = "ytdl")]
-#[command(version, about = "A professional CLI tool for downloading YouTube videos")]
+#[command(version, about = "YouTube Downloader - Download videos and audio from YouTube")]
 pub struct Cli {
     /// The subcommand to execute
     #[command(subcommand)]
