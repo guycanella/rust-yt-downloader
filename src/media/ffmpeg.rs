@@ -1,11 +1,69 @@
+//! FFmpeg integration and command execution.
+//!
+//! This module provides low-level FFmpeg integration for media processing operations.
+//! It handles FFmpeg command execution, error handling, and provides utilities for
+//! common media manipulation tasks.
+//!
+//! # FFmpeg Availability
+//!
+//! Before using any FFmpeg functionality, the module checks for FFmpeg availability
+//! in the system PATH. All operations will return [`AppError::FfmpegNotFound`] if
+//! FFmpeg is not installed.
+//!
+//! # Command Execution
+//!
+//! The module executes FFmpeg as a subprocess using [`std::process::Command`]. All
+//! commands are executed synchronously and return detailed error information on failure.
+//!
+//! # Example
+//!
+//! ```no_run
+//! use rust_yt_downloader::media::FFmpeg;
+//!
+//! // Check FFmpeg availability
+//! if FFmpeg::is_available() {
+//!     let version = FFmpeg::version()?;
+//!     println!("FFmpeg version: {}", version);
+//!
+//!     // Extract audio from video
+//!     FFmpeg::extract_audio("input.mp4", "output.mp3")?;
+//! }
+//! # Ok::<(), rust_yt_downloader::error::AppError>(())
+//! ```
+
 use std::process::{Command, Output};
 use std::path::Path;
 
 use crate::error::{AppError, AppResult};
 
+/// Core FFmpeg integration wrapper.
+///
+/// Provides methods for checking FFmpeg availability, executing FFmpeg commands,
+/// and performing common media operations like format conversion, audio extraction,
+/// and video trimming.
+///
+/// All methods that execute FFmpeg commands will first verify that FFmpeg is available
+/// in the system PATH.
 pub struct FFmpeg;
 
 impl FFmpeg {
+    /// Checks if FFmpeg is available in the system PATH.
+    ///
+    /// # Returns
+    ///
+    /// `true` if FFmpeg is installed and executable, `false` otherwise.
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// use rust_yt_downloader::media::FFmpeg;
+    ///
+    /// if FFmpeg::is_available() {
+    ///     println!("FFmpeg is ready to use");
+    /// } else {
+    ///     println!("Please install FFmpeg");
+    /// }
+    /// ```
     pub fn is_available() -> bool {
         Command::new("ffmpeg")
             .arg("-version")
@@ -14,6 +72,25 @@ impl FFmpeg {
             .unwrap_or(false)
     }
 
+    /// Retrieves the FFmpeg version string.
+    ///
+    /// # Returns
+    ///
+    /// The first line of FFmpeg's version output (e.g., "ffmpeg version 4.4.2").
+    ///
+    /// # Errors
+    ///
+    /// Returns [`AppError::FfmpegNotFound`] if FFmpeg is not available or fails to execute.
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// use rust_yt_downloader::media::FFmpeg;
+    ///
+    /// let version = FFmpeg::version()?;
+    /// println!("Using {}", version);
+    /// # Ok::<(), rust_yt_downloader::error::AppError>(())
+    /// ```
     pub fn version() -> AppResult<String> {
         let output = Command::new("ffmpeg")
             .arg("-version")
@@ -33,6 +110,24 @@ impl FFmpeg {
         Ok(first_line.to_string())
     }
 
+    /// Ensures FFmpeg is available, returning an error if not.
+    ///
+    /// This is a convenience method that checks FFmpeg availability and returns
+    /// an error if it's not found, suitable for use with the `?` operator.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`AppError::FfmpegNotFound`] if FFmpeg is not available.
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// use rust_yt_downloader::media::FFmpeg;
+    ///
+    /// FFmpeg::require()?;
+    /// // FFmpeg is guaranteed to be available here
+    /// # Ok::<(), rust_yt_downloader::error::AppError>(())
+    /// ```
     pub fn require() -> AppResult<()> {
         if !Self::is_available() {
             return Err(AppError::FfmpegNotFound);
@@ -40,6 +135,31 @@ impl FFmpeg {
         Ok(())
     }
 
+    /// Executes an FFmpeg command with the specified arguments.
+    ///
+    /// # Arguments
+    ///
+    /// * `args` - Command-line arguments to pass to FFmpeg
+    ///
+    /// # Returns
+    ///
+    /// The command's output (stdout, stderr, and exit status) on success.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    /// - FFmpeg is not available ([`AppError::FfmpegNotFound`])
+    /// - The command fails to execute ([`AppError::FfmpegExecution`])
+    /// - The command returns a non-zero exit code ([`AppError::FfmpegExecution`])
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// use rust_yt_downloader::media::FFmpeg;
+    ///
+    /// let output = FFmpeg::run(&["-i", "input.mp4", "output.mkv"])?;
+    /// # Ok::<(), rust_yt_downloader::error::AppError>(())
+    /// ```
     pub fn run(args: &[&str]) -> AppResult<Output> {
         Self::require()?;
 
@@ -59,12 +179,56 @@ impl FFmpeg {
         Ok(output)
     }
 
+    /// Executes an FFmpeg command with automatic file overwriting enabled.
+    ///
+    /// Prepends the `-y` flag to automatically overwrite output files without prompting.
+    ///
+    /// # Arguments
+    ///
+    /// * `args` - Command-line arguments to pass to FFmpeg (without `-y`)
+    ///
+    /// # Errors
+    ///
+    /// Same as [`FFmpeg::run`].
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// use rust_yt_downloader::media::FFmpeg;
+    ///
+    /// // Will overwrite output.mp4 if it exists
+    /// FFmpeg::run_overwrite(&["-i", "input.mkv", "output.mp4"])?;
+    /// # Ok::<(), rust_yt_downloader::error::AppError>(())
+    /// ```
     pub fn run_overwrite(args: &[&str]) -> AppResult<Output> {
         let mut full_args = vec!["-y"];
         full_args.extend_from_slice(args);
         Self::run(&full_args)
     }
 
+    /// Converts a media file to a different format using stream copy (fast, no re-encoding).
+    ///
+    /// Uses FFmpeg's `-c copy` option to copy streams without re-encoding, which is fast
+    /// but only works when the codecs are compatible with the output container format.
+    ///
+    /// # Arguments
+    ///
+    /// * `input` - Path to the input file
+    /// * `output` - Path to the output file
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the conversion fails or codecs are incompatible with the output format.
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// use rust_yt_downloader::media::FFmpeg;
+    ///
+    /// // Fast conversion without re-encoding
+    /// FFmpeg::convert("video.mp4", "video.mkv")?;
+    /// # Ok::<(), rust_yt_downloader::error::AppError>(())
+    /// ```
     pub fn convert<P: AsRef<Path>>(input: P, output: P) -> AppResult<()> {
         let input_str = input.as_ref().to_string_lossy();
         let output_str = output.as_ref().to_string_lossy();
@@ -78,6 +242,29 @@ impl FFmpeg {
         Ok(())
     }
 
+    /// Converts a media file to a different format with re-encoding.
+    ///
+    /// Re-encodes both video and audio streams using the default codecs for the output format.
+    /// This is slower than [`FFmpeg::convert`] but works with any input/output format combination.
+    ///
+    /// # Arguments
+    ///
+    /// * `input` - Path to the input file
+    /// * `output` - Path to the output file
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the conversion fails.
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// use rust_yt_downloader::media::FFmpeg;
+    ///
+    /// // Convert with re-encoding (slower but always works)
+    /// FFmpeg::convert_reencode("video.avi", "video.mp4")?;
+    /// # Ok::<(), rust_yt_downloader::error::AppError>(())
+    /// ```
     pub fn convert_reencode<P: AsRef<Path>>(input: P, output: P) -> AppResult<()> {
         let input_str = input.as_ref().to_string_lossy();
         let output_str = output.as_ref().to_string_lossy();
@@ -90,6 +277,29 @@ impl FFmpeg {
         Ok(())
     }
 
+    /// Extracts the audio stream from a media file without re-encoding.
+    ///
+    /// Uses FFmpeg's `-vn` flag to disable video and `-acodec copy` to copy the audio
+    /// stream without re-encoding. This is fast but preserves the original audio codec.
+    ///
+    /// # Arguments
+    ///
+    /// * `input` - Path to the input media file
+    /// * `output` - Path to the output audio file
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if extraction fails or the output format doesn't support the audio codec.
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// use rust_yt_downloader::media::FFmpeg;
+    ///
+    /// // Extract audio without re-encoding
+    /// FFmpeg::extract_audio("video.mp4", "audio.m4a")?;
+    /// # Ok::<(), rust_yt_downloader::error::AppError>(())
+    /// ```
     pub fn extract_audio<P: AsRef<Path>>(input: P, output: P) -> AppResult<()> {
         let input_str = input.as_ref().to_string_lossy();
         let output_str = output.as_ref().to_string_lossy();
@@ -104,6 +314,31 @@ impl FFmpeg {
         Ok(())
     }
 
+    /// Extracts and converts audio from a media file to a specific codec.
+    ///
+    /// Extracts the audio stream and re-encodes it using the specified codec and optional bitrate.
+    /// This is slower than [`FFmpeg::extract_audio`] but allows format conversion.
+    ///
+    /// # Arguments
+    ///
+    /// * `input` - Path to the input media file
+    /// * `output` - Path to the output audio file
+    /// * `codec` - Audio codec to use (e.g., "libmp3lame", "aac", "flac")
+    /// * `bitrate` - Optional bitrate (e.g., "320k", "192k")
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if extraction or encoding fails.
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// use rust_yt_downloader::media::FFmpeg;
+    ///
+    /// // Extract audio as MP3 with 320k bitrate
+    /// FFmpeg::extract_audio_as("video.mp4", "audio.mp3", "libmp3lame", Some("320k"))?;
+    /// # Ok::<(), rust_yt_downloader::error::AppError>(())
+    /// ```
     pub fn extract_audio_as<P: AsRef<Path>>(
         input: P,
         output: P,
@@ -133,6 +368,31 @@ impl FFmpeg {
         Ok(())
     }
 
+    /// Trims a media file to a specific time range using stream copy.
+    ///
+    /// Cuts the media file from `start` to `end` time without re-encoding (fast).
+    /// Time format: "HH:MM:SS" or "SS.mmm" (seconds with milliseconds).
+    ///
+    /// # Arguments
+    ///
+    /// * `input` - Path to the input media file
+    /// * `output` - Path to the output media file
+    /// * `start` - Start time (e.g., "00:01:30" or "90")
+    /// * `end` - End time (e.g., "00:03:00" or "180")
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if trimming fails or time format is invalid.
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// use rust_yt_downloader::media::FFmpeg;
+    ///
+    /// // Trim from 1:30 to 3:00 without re-encoding
+    /// FFmpeg::trim("video.mp4", "clip.mp4", "00:01:30", "00:03:00")?;
+    /// # Ok::<(), rust_yt_downloader::error::AppError>(())
+    /// ```
     pub fn trim<P: AsRef<Path>>(
         input: P,
         output: P,
@@ -153,6 +413,31 @@ impl FFmpeg {
         Ok(())
     }
 
+    /// Trims a media file to a specific time range with re-encoding.
+    ///
+    /// Cuts the media file from `start` to `end` time with re-encoding (slower but more accurate).
+    /// Use this when stream copy produces inaccurate cuts or fails.
+    ///
+    /// # Arguments
+    ///
+    /// * `input` - Path to the input media file
+    /// * `output` - Path to the output media file
+    /// * `start` - Start time (e.g., "00:01:30" or "90")
+    /// * `end` - End time (e.g., "00:03:00" or "180")
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if trimming fails or time format is invalid.
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// use rust_yt_downloader::media::FFmpeg;
+    ///
+    /// // Trim with re-encoding for precise cuts
+    /// FFmpeg::trim_reencode("video.mp4", "clip.mp4", "00:01:30", "00:03:00")?;
+    /// # Ok::<(), rust_yt_downloader::error::AppError>(())
+    /// ```
     pub fn trim_reencode<P: AsRef<Path>>(
         input: P,
         output: P,
@@ -172,7 +457,32 @@ impl FFmpeg {
         Ok(())
     }
 
-    /// Get information about a media file (duration, codecs, etc)
+    /// Probes a media file to extract metadata using ffprobe.
+    ///
+    /// Uses ffprobe to retrieve detailed information about the media file including
+    /// duration, codecs, bitrates, resolution, and other metadata in JSON format.
+    ///
+    /// # Arguments
+    ///
+    /// * `input` - Path to the media file to probe
+    ///
+    /// # Returns
+    ///
+    /// JSON string containing format and stream information.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if ffprobe is not available or fails to execute.
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// use rust_yt_downloader::media::FFmpeg;
+    ///
+    /// let metadata = FFmpeg::probe("video.mp4")?;
+    /// println!("Metadata: {}", metadata);
+    /// # Ok::<(), rust_yt_downloader::error::AppError>(())
+    /// ```
     pub fn probe<P: AsRef<Path>>(input: P) -> AppResult<String> {
         let input_str = input.as_ref().to_string_lossy();
 
@@ -195,6 +505,21 @@ impl FFmpeg {
         Ok(String::from_utf8_lossy(&output.stdout).to_string())
     }
 
+    /// Checks if ffprobe is available in the system PATH.
+    ///
+    /// # Returns
+    ///
+    /// `true` if ffprobe is installed and executable, `false` otherwise.
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// use rust_yt_downloader::media::FFmpeg;
+    ///
+    /// if FFmpeg::is_probe_available() {
+    ///     println!("ffprobe is ready to use");
+    /// }
+    /// ```
     pub fn is_probe_available() -> bool {
         Command::new("ffprobe")
             .arg("-version")
@@ -204,16 +529,50 @@ impl FFmpeg {
     }
 }
 
+/// FFmpeg audio codec constants.
+///
+/// Provides standard codec names used by FFmpeg for audio encoding.
+/// These constants map to FFmpeg's encoder names which may differ from
+/// the codec or format names.
 pub struct AudioCodec;
 
 impl AudioCodec {
+    /// MP3 encoder using LAME library.
     pub const MP3: &'static str = "libmp3lame";
+
+    /// AAC encoder (Advanced Audio Coding).
     pub const AAC: &'static str = "aac";
+
+    /// FLAC encoder (Free Lossless Audio Codec).
     pub const FLAC: &'static str = "flac";
+
+    /// Opus encoder (low-latency audio codec).
     pub const OPUS: &'static str = "libopus";
+
+    /// Vorbis encoder (part of Ogg container).
     pub const VORBIS: &'static str = "libvorbis";
+
+    /// WAV encoder using 16-bit PCM.
     pub const WAV: &'static str = "pcm_s16le";
 
+    /// Returns the appropriate FFmpeg codec name for a given file extension.
+    ///
+    /// # Arguments
+    ///
+    /// * `ext` - File extension (case-insensitive)
+    ///
+    /// # Returns
+    ///
+    /// FFmpeg codec name, defaults to AAC for unknown extensions.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use rust_yt_downloader::media::AudioCodec;
+    ///
+    /// assert_eq!(AudioCodec::for_extension("mp3"), "libmp3lame");
+    /// assert_eq!(AudioCodec::for_extension("flac"), "flac");
+    /// ```
     pub fn for_extension(ext: &str) -> &'static str {
         match ext.to_lowercase().as_str() {
             "mp3" => Self::MP3,
@@ -226,14 +585,43 @@ impl AudioCodec {
     }
 }
 
+/// Audio bitrate presets for encoding.
+///
+/// Provides standard bitrate values for different quality levels.
+/// Higher bitrates generally result in better audio quality but larger file sizes.
 pub struct AudioBitrate;
 
 impl AudioBitrate {
+    /// Low quality bitrate (128 kbps).
     pub const LOW: &'static str = "128k";
+
+    /// Medium quality bitrate (192 kbps).
     pub const MEDIUM: &'static str = "192k";
+
+    /// High quality bitrate (256 kbps).
     pub const HIGH: &'static str = "256k";
+
+    /// Very high quality bitrate (320 kbps).
     pub const VERY_HIGH: &'static str = "320k";
 
+    /// Returns the recommended default bitrate for a given audio format.
+    ///
+    /// # Arguments
+    ///
+    /// * `format` - Audio format or file extension (case-insensitive)
+    ///
+    /// # Returns
+    ///
+    /// Recommended bitrate string, defaults to HIGH (256k) for unknown formats.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use rust_yt_downloader::media::AudioBitrate;
+    ///
+    /// assert_eq!(AudioBitrate::default_for_format("mp3"), "320k");
+    /// assert_eq!(AudioBitrate::default_for_format("opus"), "192k");
+    /// ```
     pub fn default_for_format(format: &str) -> &'static str {
         match format.to_lowercase().as_str() {
             "mp3" => Self::VERY_HIGH,

@@ -1,16 +1,71 @@
+//! Utility functions for file handling, formatting, and YouTube URL parsing.
+//!
+//! This module provides common utilities used throughout the application:
+//! - Filename sanitization for safe filesystem operations
+//! - Path expansion with tilde (~) support
+//! - Human-readable byte and duration formatting
+//! - YouTube video/playlist ID extraction from URLs
+//! - Template-based filename generation
+
 use std::path::PathBuf;
 use reqwest::Url;
 use chrono::{DateTime, Utc};
 
 use crate::error::{AppError, AppResult};
 
+/// Metadata for a YouTube video used in template-based filename generation.
+///
+/// This struct holds information about a video that can be used to generate
+/// custom filenames using placeholders like `{title}`, `{id}`, `{date}`, and `{duration}`.
+///
+/// # Examples
+///
+/// ```
+/// use chrono::Utc;
+/// use rust_yt_downloader::utils::VideoMetadata;
+///
+/// let metadata = VideoMetadata {
+///     title: "My Awesome Video",
+///     id: "dQw4w9WgXcQ",
+///     date: Some(Utc::now()),
+///     duration: Some("03:45"),
+/// };
+/// ```
 pub struct VideoMetadata<'a> {
+    /// The video's title
     pub title: &'a str,
+    /// The unique YouTube video ID
     pub id: &'a str,
+    /// The upload date (optional)
     pub date: Option<DateTime<Utc>>,
+    /// The video duration as a formatted string (optional)
     pub duration: Option<&'a str>,
 }
 
+/// Sanitizes a filename by replacing invalid characters with underscores.
+///
+/// Removes or replaces characters that are invalid in filenames across different operating systems,
+/// including: `/ \ : * ? " < > |`. Also collapses consecutive underscores into a single underscore.
+///
+/// # Arguments
+///
+/// * `filename` - The filename to sanitize
+///
+/// # Returns
+///
+/// A sanitized filename safe for use on all major filesystems.
+///
+/// # Examples
+///
+/// ```
+/// use rust_yt_downloader::utils::sanitize_filename;
+///
+/// let filename = sanitize_filename("My Video: Part 1?");
+/// assert_eq!(filename, "My Video_ Part 1");
+///
+/// let filename = sanitize_filename("path/to/file.mp4");
+/// assert_eq!(filename, "path_to_file.mp4");
+/// ```
 pub fn sanitize_filename(filename: &str) -> String {
     filename
         .chars()
@@ -28,6 +83,30 @@ pub fn sanitize_filename(filename: &str) -> String {
         .to_string()
 }
 
+/// Expands a path with tilde (~) to the user's home directory.
+///
+/// Converts paths starting with `~` to their absolute equivalents using the user's home directory.
+/// If the path doesn't start with `~` or the home directory cannot be determined, returns the path unchanged.
+///
+/// # Arguments
+///
+/// * `path` - The path to expand
+///
+/// # Returns
+///
+/// A `PathBuf` with the tilde expanded to the home directory, or the original path.
+///
+/// # Examples
+///
+/// ```
+/// use rust_yt_downloader::utils::expand_path;
+///
+/// // Expands to /home/user/Downloads (on Unix)
+/// let path = expand_path("~/Downloads");
+///
+/// // Returns the path unchanged
+/// let path = expand_path("/absolute/path");
+/// ```
 pub fn expand_path(path: &str) -> PathBuf {
     if !path.starts_with('~') {
         return PathBuf::from(path);
@@ -44,6 +123,28 @@ pub fn expand_path(path: &str) -> PathBuf {
     PathBuf::from(path)
 }
 
+/// Formats a byte count into a human-readable string with appropriate unit suffix.
+///
+/// Converts byte values into KB, MB, GB, TB, PB, or EB as appropriate, using binary units (1024 bytes = 1 KB).
+///
+/// # Arguments
+///
+/// * `bytes` - The number of bytes to format
+///
+/// # Returns
+///
+/// A formatted string with two decimal places and the appropriate unit (B, KB, MB, GB, TB, PB, EB).
+///
+/// # Examples
+///
+/// ```
+/// use rust_yt_downloader::utils::format_bytes;
+///
+/// assert_eq!(format_bytes(500), "500 B");
+/// assert_eq!(format_bytes(1024), "1.00 KB");
+/// assert_eq!(format_bytes(1024 * 1024), "1.00 MB");
+/// assert_eq!(format_bytes(1536), "1.50 KB");
+/// ```
 pub fn format_bytes(bytes: u64) -> String {
     const UNIT: f64 = 1024.0;
     if bytes < UNIT as u64 {
@@ -53,12 +154,31 @@ pub fn format_bytes(bytes: u64) -> String {
     let parsed_bytes = bytes as f64;
     let exponent = (parsed_bytes.ln() / UNIT.ln()) as i32;
     let prefix = "KMGTPE".chars().nth((exponent - 1) as usize).unwrap_or('?');
-    
+
     let value = parsed_bytes / UNIT.powi(exponent);
 
     format!("{:.2} {}B", value, prefix)
 }
 
+/// Formats a duration in seconds to HH:MM:SS format.
+///
+/// # Arguments
+///
+/// * `total_seconds` - The total number of seconds
+///
+/// # Returns
+///
+/// A string in `HH:MM:SS` format with zero-padding.
+///
+/// # Examples
+///
+/// ```
+/// use rust_yt_downloader::utils::format_duration;
+///
+/// assert_eq!(format_duration(45), "00:00:45");
+/// assert_eq!(format_duration(3661), "01:01:01");
+/// assert_eq!(format_duration(7384), "02:03:04");
+/// ```
 pub fn format_duration(total_seconds: u64) -> String {
     let hours = total_seconds / 3600;
     let rest = total_seconds % 3600;
@@ -68,6 +188,34 @@ pub fn format_duration(total_seconds: u64) -> String {
     format!("{:02}:{:02}:{:02}", hours, minutes, seconds)
 }
 
+/// Parses a duration string to total seconds.
+///
+/// Accepts durations in three formats:
+/// - Seconds only: `"45"` → 45 seconds
+/// - Minutes and seconds: `"02:30"` → 150 seconds
+/// - Hours, minutes, and seconds: `"01:30:45"` → 5445 seconds
+///
+/// # Arguments
+///
+/// * `seconds` - A duration string in one of the supported formats
+///
+/// # Returns
+///
+/// The total duration in seconds, or an error if the format is invalid.
+///
+/// # Errors
+///
+/// Returns `AppError::InvalidTimeFormat` if the string cannot be parsed or contains non-numeric values.
+///
+/// # Examples
+///
+/// ```
+/// use rust_yt_downloader::utils::parse_duration;
+///
+/// assert_eq!(parse_duration("45").unwrap(), 45);
+/// assert_eq!(parse_duration("02:30").unwrap(), 150);
+/// assert_eq!(parse_duration("01:30:45").unwrap(), 5445);
+/// ```
 pub fn parse_duration(seconds: &str) -> AppResult<u64> {
     let parts: Vec<&str> = seconds.split(':').collect();
 
@@ -95,6 +243,32 @@ pub fn parse_duration(seconds: &str) -> AppResult<u64> {
     }
 }
 
+/// Extracts the video ID from a YouTube URL.
+///
+/// Supports multiple YouTube URL formats:
+/// - Standard: `https://www.youtube.com/watch?v=VIDEO_ID`
+/// - Short: `https://youtu.be/VIDEO_ID`
+/// - Embed: `https://www.youtube.com/embed/VIDEO_ID`
+///
+/// # Arguments
+///
+/// * `url` - A YouTube video URL
+///
+/// # Returns
+///
+/// The video ID if the URL is valid, or `None` if it cannot be parsed.
+///
+/// # Examples
+///
+/// ```
+/// use rust_yt_downloader::utils::extract_video_id;
+///
+/// let id = extract_video_id("https://www.youtube.com/watch?v=dQw4w9WgXcQ");
+/// assert_eq!(id, Some("dQw4w9WgXcQ".to_string()));
+///
+/// let id = extract_video_id("https://youtu.be/dQw4w9WgXcQ");
+/// assert_eq!(id, Some("dQw4w9WgXcQ".to_string()));
+/// ```
 pub fn extract_video_id(url: &str) -> Option<String> {
     let parsed_url = Url::parse(url).ok()?;
     let domain = parsed_url.domain()?;
@@ -113,6 +287,29 @@ pub fn extract_video_id(url: &str) -> Option<String> {
     None
 }
 
+/// Extracts the playlist ID from a YouTube URL.
+///
+/// Parses the `list` query parameter from YouTube URLs to extract playlist IDs.
+///
+/// # Arguments
+///
+/// * `url_str` - A YouTube URL that may contain a playlist
+///
+/// # Returns
+///
+/// The playlist ID if present, or `None` if the URL doesn't contain a playlist parameter.
+///
+/// # Examples
+///
+/// ```
+/// use rust_yt_downloader::utils::extract_playlist_id;
+///
+/// let id = extract_playlist_id("https://www.youtube.com/playlist?list=PLrAXtmErZgOe");
+/// assert_eq!(id, Some("PLrAXtmErZgOe".to_string()));
+///
+/// let id = extract_playlist_id("https://www.youtube.com/watch?v=abc&list=PLrAXtmErZgOe");
+/// assert_eq!(id, Some("PLrAXtmErZgOe".to_string()));
+/// ```
 pub fn extract_playlist_id(url_str: &str) -> Option<String> {
     let parsed_url = Url::parse(url_str).ok()?;
     parsed_url.query_pairs()
@@ -120,11 +317,44 @@ pub fn extract_playlist_id(url_str: &str) -> Option<String> {
         .map(|(_, value)| value.to_string())
 }
 
+/// Applies a filename template using video metadata.
+///
+/// Replaces placeholders in a template string with actual video metadata:
+/// - `{title}` - Video title (sanitized for filesystem safety)
+/// - `{id}` - YouTube video ID
+/// - `{date}` - Upload date in YYYY-MM-DD format (or current date if unavailable)
+/// - `{duration}` - Video duration (empty string if unavailable)
+///
+/// # Arguments
+///
+/// * `template` - A template string with placeholders
+/// * `meta` - Video metadata to substitute into the template
+///
+/// # Returns
+///
+/// The filename with all placeholders replaced.
+///
+/// # Examples
+///
+/// ```
+/// use rust_yt_downloader::utils::{apply_template, VideoMetadata};
+/// use chrono::Utc;
+///
+/// let metadata = VideoMetadata {
+///     title: "My Video",
+///     id: "abc123",
+///     date: Some(Utc::now()),
+///     duration: Some("10:30"),
+/// };
+///
+/// let filename = apply_template("{title}-{id}", &metadata);
+/// assert_eq!(filename, "My Video-abc123");
+/// ```
 pub fn apply_template(template: &str, meta: &VideoMetadata) -> String {
     let date_str = meta.date
         .map(|d| d.format("%Y-%m-%d").to_string())
         .unwrap_or_else(|| Utc::now().format("%Y-%m-%d").to_string());
-    
+
     let safe_title = sanitize_filename(meta.title);
 
     let filename = template

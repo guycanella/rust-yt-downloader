@@ -1,22 +1,117 @@
+//! YouTube playlist URL validation and video ID extraction.
+//!
+//! This module provides functionality for working with YouTube playlists,
+//! including URL validation, playlist ID extraction, and utilities for
+//! filtering and processing multiple playlist URLs.
+//!
+//! # Supported URL Formats
+//!
+//! - Standard: `https://www.youtube.com/playlist?list=PLxxxxx`
+//! - With video: `https://www.youtube.com/watch?v=VIDEO_ID&list=PLxxxxx`
+//! - With parameters: URLs containing index, shuffle, etc.
+
 use crate::error::{AppError, AppResult};
 use crate::utils::extract_playlist_id;
 use crate::youtube::metadata::PlaylistInfo;
 
+/// Client for working with YouTube playlists.
+///
+/// Provides methods to validate playlist URLs, extract playlist IDs,
+/// and fetch playlist metadata. Currently uses basic playlist info;
+/// full implementation with yt-dlp integration is planned.
+///
+/// # Examples
+///
+/// ```
+/// use rust_yt_downloader::youtube::PlaylistClient;
+///
+/// let client = PlaylistClient::new();
+///
+/// // Validate a playlist URL
+/// let is_valid = PlaylistClient::is_playlist_url(
+///     "https://www.youtube.com/playlist?list=PLrAXtmErZgOe"
+/// );
+///
+/// // Extract playlist ID
+/// let id = PlaylistClient::get_playlist_id(
+///     "https://www.youtube.com/playlist?list=PLrAXtmErZgOe"
+/// ).unwrap();
+/// assert_eq!(id, "PLrAXtmErZgOe");
+/// ```
 pub struct PlaylistClient;
 
 impl PlaylistClient {
+    /// Creates a new playlist client instance.
     pub fn new() -> Self {
         Self
     }
 
+    /// Checks if a URL is a valid YouTube playlist URL.
+    ///
+    /// Validates the URL format and checks for the presence of a `list` parameter.
+    /// Does not verify if the playlist actually exists.
+    ///
+    /// # Arguments
+    ///
+    /// * `url` - The URL to check
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use rust_yt_downloader::youtube::PlaylistClient;
+    ///
+    /// assert!(PlaylistClient::is_playlist_url(
+    ///     "https://www.youtube.com/playlist?list=PLtest"
+    /// ));
+    /// assert!(PlaylistClient::is_playlist_url(
+    ///     "https://www.youtube.com/watch?v=abc&list=PLtest"
+    /// ));
+    /// assert!(!PlaylistClient::is_playlist_url(
+    ///     "https://www.youtube.com/watch?v=abc"
+    /// ));
+    /// ```
     pub fn is_playlist_url(url: &str) -> bool {
         extract_playlist_id(url).is_some()
     }
 
+    /// Extracts the playlist ID from a YouTube URL.
+    ///
+    /// Parses the URL and extracts the value of the `list` query parameter.
+    ///
+    /// # Arguments
+    ///
+    /// * `url` - A YouTube URL containing a playlist ID
+    ///
+    /// # Errors
+    ///
+    /// Returns `AppError::InvalidUrl` if the URL does not contain a valid playlist ID.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use rust_yt_downloader::youtube::PlaylistClient;
+    ///
+    /// let id = PlaylistClient::get_playlist_id(
+    ///     "https://www.youtube.com/playlist?list=PLtest123"
+    /// ).unwrap();
+    /// assert_eq!(id, "PLtest123");
+    /// ```
     pub fn get_playlist_id(url: &str) -> AppResult<String> {
         extract_playlist_id(url).ok_or_else(|| AppError::InvalidUrl(url.to_string()))
     }
 
+    /// Fetches playlist information from YouTube.
+    ///
+    /// Currently returns basic playlist structure with the extracted ID.
+    /// Full implementation using yt-dlp for actual playlist metadata is planned.
+    ///
+    /// # Arguments
+    ///
+    /// * `url` - A valid YouTube playlist URL
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the URL is invalid or the playlist ID cannot be extracted.
     pub async fn get_playlist_info(&self, url: &str) -> AppResult<PlaylistInfo> {
         let playlist_id = Self::get_playlist_id(url)?;
 
@@ -30,11 +125,32 @@ impl PlaylistClient {
         })
     }
 
+    /// Fetches the list of video IDs from a playlist.
+    ///
+    /// This is a convenience method that retrieves playlist info and returns
+    /// just the video IDs vector.
+    ///
+    /// # Arguments
+    ///
+    /// * `url` - A valid YouTube playlist URL
     pub async fn get_video_ids(&self, url: &str) -> AppResult<Vec<String>> {
         let info = self.get_playlist_info(url).await?;
         Ok(info.video_ids)
     }
 
+    /// Validates a playlist URL and returns a Result.
+    ///
+    /// Similar to `is_playlist_url` but returns a Result with a descriptive
+    /// error message instead of a boolean.
+    ///
+    /// # Arguments
+    ///
+    /// * `url` - The URL to validate
+    ///
+    /// # Errors
+    ///
+    /// Returns `AppError::InvalidUrl` with a descriptive message if the URL
+    /// is not a valid playlist URL.
     pub fn validate_playlist_url(url: &str) -> AppResult<()> {
         if !Self::is_playlist_url(url) {
             return Err(AppError::InvalidUrl(format!(
@@ -52,12 +168,70 @@ impl Default for PlaylistClient {
     }
 }
 
+/// Extracts playlist IDs from multiple URLs.
+///
+/// Processes a slice of URLs and attempts to extract the playlist ID from each.
+/// Returns a vector of Results, preserving the order of the input URLs.
+///
+/// # Arguments
+///
+/// * `urls` - A slice of URL strings to process
+///
+/// # Returns
+///
+/// A vector where each element is either:
+/// - `Ok(String)` containing the extracted playlist ID
+/// - `Err(AppError)` if the URL is invalid or lacks a playlist ID
+///
+/// # Examples
+///
+/// ```
+/// use rust_yt_downloader::youtube::extract_playlist_ids;
+///
+/// let urls = vec![
+///     "https://www.youtube.com/playlist?list=PLfirst".to_string(),
+///     "https://www.youtube.com/watch?v=abc".to_string(), // No playlist
+///     "https://www.youtube.com/playlist?list=PLsecond".to_string(),
+/// ];
+///
+/// let results = extract_playlist_ids(&urls);
+/// assert!(results[0].is_ok());
+/// assert!(results[1].is_err());
+/// assert!(results[2].is_ok());
+/// ```
 pub fn extract_playlist_ids(urls: &[String]) -> Vec<AppResult<String>> {
     urls.iter()
         .map(|url| PlaylistClient::get_playlist_id(url))
         .collect()
 }
 
+/// Filters a list of URLs to include only valid playlist URLs.
+///
+/// Returns references to URLs that contain valid playlist IDs, maintaining
+/// the original order.
+///
+/// # Arguments
+///
+/// * `urls` - A slice of URL strings to filter
+///
+/// # Returns
+///
+/// A vector of references to URLs that are valid playlist URLs
+///
+/// # Examples
+///
+/// ```
+/// use rust_yt_downloader::youtube::filter_valid_playlist_urls;
+///
+/// let urls = vec![
+///     "https://www.youtube.com/playlist?list=PLtest1".to_string(),
+///     "https://www.youtube.com/watch?v=abc".to_string(),
+///     "https://www.youtube.com/playlist?list=PLtest2".to_string(),
+/// ];
+///
+/// let valid = filter_valid_playlist_urls(&urls);
+/// assert_eq!(valid.len(), 2);
+/// ```
 pub fn filter_valid_playlist_urls(urls: &[String]) -> Vec<&String> {
     urls.iter()
         .filter(|url| PlaylistClient::is_playlist_url(url))

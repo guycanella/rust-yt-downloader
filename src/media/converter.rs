@@ -1,20 +1,60 @@
-// src/media/converter.rs
+//! Video format conversion and transcoding.
+//!
+//! This module provides video conversion capabilities including:
+//! - Converting between video container formats (MP4, MKV, WebM, etc.)
+//! - Stream copying for fast format changes
+//! - Re-encoding with quality and codec control
+//! - Resolution and framerate adjustments
+//!
+//! # Format Conversion Logic
+//!
+//! Video conversion supports two modes:
+//!
+//! 1. **Stream Copy** (`-c copy`): Fast, lossless container format change without re-encoding.
+//!    Only works when codecs are compatible with the target container.
+//!
+//! 2. **Re-encoding**: Slower but works with any format combination. Allows quality,
+//!    resolution, and codec customization.
+//!
+//! # Example
+//!
+//! ```no_run
+//! use rust_yt_downloader::media::{VideoConverter, ConversionOptions, VideoFormat};
+//!
+//! // Fast conversion using stream copy
+//! let options = ConversionOptions::fast(VideoFormat::Mkv);
+//! VideoConverter::convert("video.mp4", "video.mkv", &options)?;
+//!
+//! // High quality re-encode
+//! let options = ConversionOptions::high_quality(VideoFormat::Mp4);
+//! VideoConverter::convert("video.avi", "video.mp4", &options)?;
+//! # Ok::<(), rust_yt_downloader::error::AppError>(())
+//! ```
 
 use std::path::{Path, PathBuf};
 
 use crate::error::{AppError, AppResult};
 use crate::media::ffmpeg::FFmpeg;
 
+/// Supported video container formats.
+///
+/// Each format represents a container that can hold various video and audio codecs.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum VideoFormat {
+    /// MP4 container (H.264/AAC, widely compatible).
     Mp4,
+    /// Matroska container (supports all codecs).
     Mkv,
+    /// WebM container (VP8/VP9/Opus, web-optimized).
     Webm,
+    /// AVI container (legacy format).
     Avi,
+    /// QuickTime MOV container (similar to MP4).
     Mov,
 }
 
 impl VideoFormat {
+    /// Returns the file extension for this video format.
     pub fn extension(&self) -> &'static str {
         match self {
             Self::Mp4 => "mp4",
@@ -25,6 +65,15 @@ impl VideoFormat {
         }
     }
 
+    /// Parses a video format from a file extension.
+    ///
+    /// # Arguments
+    ///
+    /// * `ext` - File extension (case-insensitive)
+    ///
+    /// # Returns
+    ///
+    /// `Some(VideoFormat)` if recognized, `None` otherwise.
     pub fn from_extension(ext: &str) -> Option<Self> {
         match ext.to_lowercase().as_str() {
             "mp4" => Some(Self::Mp4),
@@ -36,6 +85,7 @@ impl VideoFormat {
         }
     }
 
+    /// Returns the recommended FFmpeg video codec for this format.
     pub fn recommended_video_codec(&self) -> &'static str {
         match self {
             Self::Mp4 => "libx264",
@@ -46,6 +96,7 @@ impl VideoFormat {
         }
     }
 
+    /// Returns the recommended FFmpeg audio codec for this format.
     pub fn recommended_audio_codec(&self) -> &'static str {
         match self {
             Self::Mp4 => "aac",
@@ -56,6 +107,18 @@ impl VideoFormat {
         }
     }
 
+    /// Checks if this format can receive stream copy from the source format.
+    ///
+    /// Stream copy is possible when container formats are compatible without re-encoding.
+    /// MKV accepts streams from all formats. MP4 and MOV are mutually compatible.
+    ///
+    /// # Arguments
+    ///
+    /// * `source` - The source video format
+    ///
+    /// # Returns
+    ///
+    /// `true` if stream copy is supported, `false` if re-encoding is required.
     pub fn supports_stream_copy_from(&self, source: &VideoFormat) -> bool {
         match (source, self) {
             (Self::Mp4, Self::Mov) | (Self::Mov, Self::Mp4) => true,
@@ -66,16 +129,29 @@ impl VideoFormat {
     }
 }
 
+/// Video conversion options controlling encoding and quality.
+///
+/// Configures how video conversion is performed, including codec selection,
+/// quality settings, and whether to use stream copy or re-encoding.
 #[derive(Debug, Clone)]
 pub struct ConversionOptions {
+    /// Target video format.
     pub output_format: VideoFormat,
+    /// Use stream copy (fast) vs re-encoding (slower but customizable).
     pub stream_copy: bool,
+    /// Custom video codec (overrides recommended codec).
     pub video_codec: Option<String>,
+    /// Custom audio codec (overrides recommended codec).
     pub audio_codec: Option<String>,
+    /// Video quality (CRF: 0-51, lower = better quality, 18-28 typical).
     pub video_quality: Option<u8>,
+    /// Audio bitrate (e.g., "192k", "320k").
     pub audio_bitrate: Option<String>,
+    /// Output resolution (e.g., "1920x1080", "1280x720").
     pub resolution: Option<String>,
+    /// Output framerate in fps (e.g., 30, 60).
     pub framerate: Option<u32>,
+    /// Whether to overwrite existing output files.
     pub overwrite: bool,
 }
 
@@ -96,6 +172,7 @@ impl Default for ConversionOptions {
 }
 
 impl ConversionOptions {
+    /// Creates options for fast conversion using stream copy.
     pub fn fast(format: VideoFormat) -> Self {
         Self {
             output_format: format,
@@ -104,6 +181,7 @@ impl ConversionOptions {
         }
     }
 
+    /// Creates options for re-encoding with default codecs.
     pub fn reencode(format: VideoFormat) -> Self {
         Self {
             output_format: format,
@@ -112,6 +190,7 @@ impl ConversionOptions {
         }
     }
 
+    /// Creates options for high-quality re-encoding (CRF 18, 320k audio).
     pub fn high_quality(format: VideoFormat) -> Self {
         Self {
             output_format: format,
@@ -122,6 +201,7 @@ impl ConversionOptions {
         }
     }
 
+    /// Creates options for smaller file size (CRF 28, 128k audio).
     pub fn small_file(format: VideoFormat) -> Self {
         Self {
             output_format: format,
@@ -132,49 +212,88 @@ impl ConversionOptions {
         }
     }
 
+    /// Sets the output format (builder pattern).
     pub fn with_format(mut self, format: VideoFormat) -> Self {
         self.output_format = format;
         self
     }
 
+    /// Enables or disables stream copy mode (builder pattern).
     pub fn with_stream_copy(mut self, stream_copy: bool) -> Self {
         self.stream_copy = stream_copy;
         self
     }
 
+    /// Sets a custom video codec (builder pattern).
     pub fn with_video_codec(mut self, codec: impl Into<String>) -> Self {
         self.video_codec = Some(codec.into());
         self
     }
+
+    /// Sets a custom audio codec (builder pattern).
     pub fn with_audio_codec(mut self, codec: impl Into<String>) -> Self {
         self.audio_codec = Some(codec.into());
         self
     }
 
+    /// Sets video quality using CRF value (builder pattern).
+    /// CRF range: 0-51, where 0 is lossless and 51 is worst quality.
+    /// Typical values: 18 (high quality), 23 (default), 28 (low quality).
     pub fn with_quality(mut self, crf: u8) -> Self {
         self.video_quality = Some(crf);
         self
     }
 
+    /// Sets audio bitrate (builder pattern).
     pub fn with_audio_bitrate(mut self, bitrate: impl Into<String>) -> Self {
         self.audio_bitrate = Some(bitrate.into());
         self
     }
 
+    /// Sets output resolution (builder pattern).
     pub fn with_resolution(mut self, resolution: impl Into<String>) -> Self {
         self.resolution = Some(resolution.into());
         self
     }
 
+    /// Sets output framerate (builder pattern).
     pub fn with_framerate(mut self, fps: u32) -> Self {
         self.framerate = Some(fps);
         self
     }
 }
 
+/// Video conversion and format detection utilities.
+///
+/// Provides methods to convert videos between formats, detect formats from file paths,
+/// and determine if re-encoding is necessary.
 pub struct VideoConverter;
 
 impl VideoConverter {
+    /// Converts a video file to a different format with custom options.
+    ///
+    /// This is the primary conversion method that builds FFmpeg commands based on the
+    /// provided options, supporting both stream copy and re-encoding modes.
+    ///
+    /// # Arguments
+    ///
+    /// * `input` - Path to the input video file
+    /// * `output` - Path to the output video file
+    /// * `options` - Conversion options controlling codec, quality, etc.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if FFmpeg is not available or conversion fails.
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// use rust_yt_downloader::media::{VideoConverter, ConversionOptions, VideoFormat};
+    ///
+    /// let options = ConversionOptions::high_quality(VideoFormat::Mp4);
+    /// VideoConverter::convert("input.avi", "output.mp4", &options)?;
+    /// # Ok::<(), rust_yt_downloader::error::AppError>(())
+    /// ```
     pub fn convert<P: AsRef<Path>>(input: P, output: P, options: &ConversionOptions) -> AppResult<()> {
         FFmpeg::require()?;
 
@@ -239,14 +358,21 @@ impl VideoConverter {
         Ok(())
     }
 
+    /// Converts a video using fast stream copy (no re-encoding).
     pub fn convert_fast<P: AsRef<Path>>(input: P, output: P) -> AppResult<()> {
         FFmpeg::convert(input, output)
     }
 
+    /// Converts a video with re-encoding using default codecs.
     pub fn convert_reencode<P: AsRef<Path>>(input: P, output: P) -> AppResult<()> {
         FFmpeg::convert_reencode(input, output)
     }
 
+    /// Detects video format from file extension.
+    ///
+    /// # Returns
+    ///
+    /// `Some(VideoFormat)` if the extension is recognized, `None` otherwise.
     pub fn detect_format<P: AsRef<Path>>(path: P) -> Option<VideoFormat> {
         path.as_ref()
             .extension()
@@ -254,6 +380,16 @@ impl VideoConverter {
             .and_then(VideoFormat::from_extension)
     }
 
+    /// Generates an output path by changing the file extension to match the target format.
+    ///
+    /// # Arguments
+    ///
+    /// * `input` - Original file path
+    /// * `format` - Target video format
+    ///
+    /// # Returns
+    ///
+    /// Path with the extension changed to match the format.
     pub fn output_path_with_format<P: AsRef<Path>>(input: P, format: VideoFormat) -> PathBuf {
         let input_path = input.as_ref();
         let stem = input_path.file_stem().unwrap_or_default();
@@ -264,6 +400,19 @@ impl VideoConverter {
             .join(format!("{}.{}", stem.to_string_lossy(), format.extension()))
     }
 
+    /// Determines if re-encoding is required for the conversion.
+    ///
+    /// Checks if the input and output formats support stream copy.
+    /// If not, re-encoding is necessary.
+    ///
+    /// # Arguments
+    ///
+    /// * `input` - Input file path
+    /// * `output_format` - Target video format
+    ///
+    /// # Returns
+    ///
+    /// `true` if re-encoding is required, `false` if stream copy can be used.
     pub fn needs_reencode<P: AsRef<Path>>(input: P, output_format: VideoFormat) -> bool {
         let input_format = Self::detect_format(&input);
 
@@ -274,10 +423,17 @@ impl VideoConverter {
     }
 }
 
+/// Result information from a video conversion operation.
+///
+/// Contains details about the completed conversion including the output path,
+/// format, and whether stream copy was used.
 #[derive(Debug)]
 pub struct ConversionResult {
+    /// Path to the converted output file.
     pub output_path: PathBuf,
+    /// Output video format.
     pub format: VideoFormat,
+    /// Whether stream copy was used (fast) vs re-encoding (slow).
     pub used_stream_copy: bool,
 }
 

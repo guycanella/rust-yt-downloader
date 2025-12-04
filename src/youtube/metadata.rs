@@ -1,50 +1,169 @@
+//! Metadata structures for YouTube videos, streams, and playlists.
+//!
+//! This module defines the core data structures used to represent YouTube video
+//! information, available streams with various quality levels, and playlist metadata.
+//! It also provides utility methods for filtering and selecting streams based on
+//! quality preferences.
+
 use serde::{Deserialize, Serialize};
 
+/// Complete metadata for a YouTube video.
+///
+/// Contains all relevant information about a video including its metadata,
+/// available streams at different quality levels, and optional fields like
+/// thumbnails and view counts.
+///
+/// # Examples
+///
+/// ```no_run
+/// # use rust_yt_downloader::youtube::{YouTubeClient, QualityFilter};
+/// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+/// let client = YouTubeClient::new();
+/// let info = client.get_video_info("https://www.youtube.com/watch?v=dQw4w9WgXcQ").await?;
+///
+/// println!("Title: {}", info.title);
+/// println!("Duration: {} seconds", info.duration);
+///
+/// // Get the best quality stream
+/// if let Some(stream) = info.best_video_stream() {
+///     println!("Best quality: {}", stream.quality);
+/// }
+/// # Ok(())
+/// # }
+/// ```
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct VideoInfo {
+    /// Unique YouTube video ID
     pub id: String,
+    /// Video title
     pub title: String,
+    /// Full video description (may be truncated)
     pub description: Option<String>,
+    /// Video duration in seconds
     pub duration: u64,
+    /// URL to the video thumbnail image
     pub thumbnail_url: Option<String>,
+    /// Channel name or author
     pub channel: Option<String>,
+    /// Upload date in ISO format (YYYY-MM-DD)
     pub publish_date: Option<String>,
+    /// Total view count
     pub view_count: Option<u64>,
+    /// Available streams at different qualities and formats
     pub streams: Vec<StreamInfo>,
 }
 
+/// Information about a specific video or audio stream.
+///
+/// Represents a single available stream for a video, which may be video-only,
+/// audio-only, or a combined stream. Contains quality information, codec details,
+/// and technical specifications.
+///
+/// # Examples
+///
+/// ```no_run
+/// # use rust_yt_downloader::youtube::YouTubeClient;
+/// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+/// let client = YouTubeClient::new();
+/// let streams = client.get_streams("https://www.youtube.com/watch?v=dQw4w9WgXcQ").await?;
+///
+/// for stream in &streams {
+///     if !stream.is_audio_only {
+///         println!("{} - {}", stream.quality, stream.description());
+///     }
+/// }
+/// # Ok(())
+/// # }
+/// ```
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct StreamInfo {
+    /// Direct URL to the stream (may expire)
     pub url: String,
+    /// Quality label (e.g., "1080p", "720p", "audio")
     pub quality: String,
+    /// Container format (e.g., "mp4", "webm")
     pub format: String,
+    /// Video codec (e.g., "h264", "vp9")
     pub video_codec: Option<String>,
+    /// Audio codec (e.g., "aac", "opus")
     pub audio_codec: Option<String>,
+    /// Whether this stream contains only audio
     pub is_audio_only: bool,
+    /// Total file size in bytes
     pub file_size: Option<u64>,
+    /// Average bitrate in bits per second
     pub bitrate: Option<u64>,
+    /// Frames per second (video streams only)
     pub fps: Option<u32>,
 }
 
+/// Metadata for a YouTube playlist.
+///
+/// Contains information about a playlist including its title, description,
+/// and a list of video IDs that belong to the playlist.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PlaylistInfo {
+    /// Unique playlist ID
     pub id: String,
+    /// Playlist title
     pub title: String,
+    /// Playlist description
     pub description: Option<String>,
+    /// Channel that owns the playlist
     pub channel: Option<String>,
+    /// Total number of videos in the playlist
     pub video_count: u64,
+    /// List of video IDs in the playlist
     pub video_ids: Vec<String>,
 }
 
+/// Quality filter for selecting video streams.
+///
+/// Used to specify quality preferences when retrieving video streams.
+/// Supports selecting the best/worst quality, an exact resolution, or
+/// the best quality up to a maximum height.
+///
+/// # Examples
+///
+/// ```
+/// use rust_yt_downloader::youtube::QualityFilter;
+///
+/// let best = QualityFilter::Best;
+/// let hd = QualityFilter::Exact(1080);
+/// let mobile = QualityFilter::MaxHeight(480);
+/// ```
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum QualityFilter {
+    /// Select the highest quality stream available
     Best,
+    /// Select the lowest quality stream available
     Worst,
+    /// Select a stream with exactly this height (e.g., 1080 for 1080p)
     Exact(u32),
+    /// Select the best stream with height not exceeding this value
     MaxHeight(u32),
 }
 
 impl VideoInfo {
+    /// Returns the highest quality video stream available.
+    ///
+    /// Filters out audio-only streams and selects the stream with the highest
+    /// resolution. Returns `None` if no video streams are available.
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// # use rust_yt_downloader::youtube::YouTubeClient;
+    /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+    /// let client = YouTubeClient::new();
+    /// let info = client.get_video_info("https://www.youtube.com/watch?v=dQw4w9WgXcQ").await?;
+    ///
+    /// if let Some(best) = info.best_video_stream() {
+    ///     println!("Best quality: {}", best.quality);
+    /// }
+    /// # Ok(())
+    /// # }
+    /// ```
     pub fn best_video_stream(&self) -> Option<&StreamInfo> {
         self.streams
             .iter()
@@ -52,6 +171,10 @@ impl VideoInfo {
             .max_by_key(|s| Self::quality_to_height(&s.quality))
     }
 
+    /// Returns the lowest quality video stream available.
+    ///
+    /// Useful for minimizing bandwidth usage or file size. Filters out
+    /// audio-only streams and selects the stream with the lowest resolution.
     pub fn worst_video_stream(&self) -> Option<&StreamInfo> {
         self.streams
             .iter()
@@ -59,6 +182,10 @@ impl VideoInfo {
             .min_by_key(|s| Self::quality_to_height(&s.quality))
     }
 
+    /// Returns the highest quality audio-only stream.
+    ///
+    /// Selects the audio stream with the highest bitrate. Returns `None`
+    /// if no audio-only streams are available.
     pub fn best_audio_stream(&self) -> Option<&StreamInfo> {
         self.streams
             .iter()
@@ -66,6 +193,14 @@ impl VideoInfo {
             .max_by_key(|s| s.bitrate.unwrap_or(0))
     }
 
+    /// Finds a video stream matching the specified quality string.
+    ///
+    /// Performs a case-insensitive search for a stream with the exact quality
+    /// label (e.g., "1080p", "720p"). Returns the first matching stream.
+    ///
+    /// # Arguments
+    ///
+    /// * `quality` - Quality string to match (e.g., "1080p", "4k")
     pub fn stream_by_quality(&self, quality: &str) -> Option<&StreamInfo> {
         self.streams
             .iter()
@@ -73,6 +208,31 @@ impl VideoInfo {
             .find(|s| s.quality.to_lowercase() == quality.to_lowercase())
     }
 
+    /// Selects a video stream based on the provided quality filter.
+    ///
+    /// This is the primary method for selecting streams with flexible quality
+    /// criteria. Supports selecting best/worst quality, exact resolutions, or
+    /// maximum height constraints.
+    ///
+    /// # Arguments
+    ///
+    /// * `filter` - Quality filter criteria to apply
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// # use rust_yt_downloader::youtube::{YouTubeClient, QualityFilter};
+    /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+    /// let client = YouTubeClient::new();
+    /// let info = client.get_video_info("https://www.youtube.com/watch?v=dQw4w9WgXcQ").await?;
+    ///
+    /// // Get best quality up to 720p
+    /// if let Some(stream) = info.stream_by_filter(QualityFilter::MaxHeight(720)) {
+    ///     println!("Selected: {}", stream.quality);
+    /// }
+    /// # Ok(())
+    /// # }
+    /// ```
     pub fn stream_by_filter(&self, filter: QualityFilter) -> Option<&StreamInfo> {
         match filter {
             QualityFilter::Best => self.best_video_stream(),
@@ -90,6 +250,14 @@ impl VideoInfo {
         }
     }
 
+    /// Returns a sorted, deduplicated list of available video quality labels.
+    ///
+    /// The qualities are sorted in descending order (highest quality first).
+    /// Audio-only streams are excluded.
+    ///
+    /// # Returns
+    ///
+    /// A vector of quality strings like `["1080p", "720p", "480p"]`
     pub fn available_qualities(&self) -> Vec<String> {
         let mut qualities: Vec<String> = self
             .streams
@@ -103,6 +271,10 @@ impl VideoInfo {
         qualities
     }
 
+    /// Converts a quality string to a numeric height value for comparison.
+    ///
+    /// Recognizes common quality labels (4k, 2160p, 1440p, 1080p, 720p, etc.)
+    /// and returns the vertical resolution in pixels. Returns 0 for unknown formats.
     fn quality_to_height(quality: &str) -> u32 {
         let quality = quality.to_lowercase();
 
@@ -136,6 +308,17 @@ impl VideoInfo {
 }
 
 impl StreamInfo {
+    /// Generates a human-readable description of the stream.
+    ///
+    /// Combines quality, codec, FPS (if > 30), and format into a single
+    /// space-separated string suitable for display.
+    ///
+    /// # Examples
+    ///
+    /// Returns strings like:
+    /// - `"1080p h264 60fps mp4"`
+    /// - `"720p vp9 webm"`
+    /// - `"audio aac m4a"`
     pub fn description(&self) -> String {
         let mut parts = vec![self.quality.clone()];
 
@@ -154,16 +337,32 @@ impl StreamInfo {
         parts.join(" ")
     }
 
+    /// Returns the file size formatted as a human-readable string.
+    ///
+    /// Converts bytes to appropriate units (KB, MB, GB). Returns `None`
+    /// if the file size is unknown.
+    ///
+    /// # Examples
+    ///
+    /// Returns strings like:
+    /// - `Some("45.2 MB")`
+    /// - `Some("1.3 GB")`
+    /// - `None` (if file_size is None)
     pub fn formatted_size(&self) -> Option<String> {
         self.file_size.map(crate::utils::format_bytes)
     }
 }
 
 impl PlaylistInfo {
+    /// Returns `true` if the playlist contains no videos.
     pub fn is_empty(&self) -> bool {
         self.video_ids.is_empty()
     }
 
+    /// Returns the number of videos in the playlist.
+    ///
+    /// This is the actual count based on the `video_ids` length,
+    /// which may differ from `video_count` in some cases.
     pub fn len(&self) -> usize {
         self.video_ids.len()
     }

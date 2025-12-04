@@ -1,3 +1,53 @@
+//! Configuration management for the YouTube downloader.
+//!
+//! This module provides a hierarchical configuration system using TOML format.
+//! Configuration files are stored at `~/.config/rust-yt-downloader/config.toml` on
+//! Linux/macOS and in the equivalent location on Windows.
+//!
+//! # Configuration Structure
+//!
+//! The configuration is organized into four main sections:
+//! - `[general]` - Application-wide settings (output directory, quality, parallelism)
+//! - `[audio]` - Audio-specific settings (format, bitrate)
+//! - `[video]` - Video-specific settings (format, thumbnails, subtitles)
+//! - `[network]` - Network-related settings (rate limiting, retries, timeouts)
+//!
+//! # Accessing Configuration Values
+//!
+//! Configuration values are accessed using dot notation with the [`Config::get()`] method:
+//! - `"general.output_dir"` - Download directory
+//! - `"audio.format"` - Default audio format (mp3, flac, etc.)
+//! - `"video.include_thumbnail"` - Whether to download thumbnails
+//! - `"network.retry_attempts"` - Number of retry attempts
+//!
+//! # Default Values
+//!
+//! All configuration fields have sensible defaults:
+//! - Output directory: `~/Downloads/YouTube`
+//! - Video quality: `"best"`
+//! - Audio format: `"mp3"` at `"320k"` bitrate
+//! - Video format: `"mp4"`
+//! - Network retries: 3 attempts with 300 second timeout
+//!
+//! # Examples
+//!
+//! ```no_run
+//! use rust_yt_downloader::config::Config;
+//!
+//! // Load configuration (or use defaults if file doesn't exist)
+//! let config = Config::load()?;
+//!
+//! // Get a configuration value
+//! if let Some(quality) = config.get("general.default_quality") {
+//!     println!("Default quality: {}", quality);
+//! }
+//!
+//! // Modify and save configuration
+//! let mut config = Config::load()?;
+//! config.set("general.default_quality", "1080p")?;
+//! config.save()?;
+//! # Ok::<(), rust_yt_downloader::error::AppError>(())
+//! ```
 
 use serde::{Deserialize, Serialize};
 use std::fs;
@@ -5,77 +55,174 @@ use std::path::PathBuf;
 
 use crate::error::{AppError, AppResult};
 
+/// Root configuration structure containing all settings.
+///
+/// This is the top-level configuration object that contains four nested
+/// configuration sections. Each section has sensible defaults, so a minimal
+/// or empty TOML file will still provide a complete working configuration.
+///
+/// # TOML Format
+///
+/// ```toml
+/// [general]
+/// output_dir = "/path/to/downloads"
+/// default_quality = "1080p"
+/// max_parallel_downloads = 3
+///
+/// [audio]
+/// format = "mp3"
+/// bitrate = "320k"
+///
+/// [video]
+/// format = "mp4"
+/// include_thumbnail = true
+/// include_subtitles = true
+///
+/// [network]
+/// rate_limit = "5M"
+/// retry_attempts = 3
+/// timeout = 300
+/// ```
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Config {
+    /// General application settings
     #[serde(default)]
     pub general: GeneralConfig,
 
+    /// Audio download and conversion settings
     #[serde(default)]
     pub audio: AudioConfig,
 
+    /// Video download settings
     #[serde(default)]
     pub video: VideoConfig,
 
+    /// Network and connection settings
     #[serde(default)]
     pub network: NetworkConfig,
 }
 
-/// General application settings
+/// General application settings.
+///
+/// Contains application-wide configuration options including the output directory,
+/// default quality preference, and parallelism settings.
+///
+/// # Default Values
+///
+/// - `output_dir`: `~/Downloads/YouTube` (platform-specific)
+/// - `default_quality`: `"best"`
+/// - `max_parallel_downloads`: `3`
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GeneralConfig {
-    /// Output directory for downloads
+    /// Output directory for downloaded files.
+    ///
+    /// Defaults to the platform's downloads directory with a "YouTube" subdirectory.
+    /// On Linux/macOS this is typically `~/Downloads/YouTube`.
     #[serde(default = "GeneralConfig::default_output_dir")]
     pub output_dir: String,
 
-    /// Default video quality
+    /// Default video quality preference.
+    ///
+    /// Can be `"best"`, `"1080p"`, `"720p"`, `"480p"`, `"360p"`, or `"worst"`.
+    /// Defaults to `"best"` which selects the highest available quality.
     #[serde(default = "GeneralConfig::default_quality")]
     pub default_quality: String,
 
-    /// Maximum parallel downloads
+    /// Maximum number of parallel downloads.
+    ///
+    /// Controls how many videos can be downloaded simultaneously when processing
+    /// playlists. Defaults to `3` to balance speed with system resources.
     #[serde(default = "GeneralConfig::default_max_parallel")]
     pub max_parallel_downloads: u32,
 }
 
-/// Audio-specific settings
+/// Audio-specific download and conversion settings.
+///
+/// Controls the format and quality of audio downloads and extractions.
+///
+/// # Default Values
+///
+/// - `format`: `"mp3"`
+/// - `bitrate`: `"320k"`
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AudioConfig {
-    /// Default audio format
+    /// Default audio format.
+    ///
+    /// Supported formats include `"mp3"`, `"flac"`, `"m4a"`, `"wav"`, and `"opus"`.
+    /// Defaults to `"mp3"` for broad compatibility.
     #[serde(default = "AudioConfig::default_format")]
     pub format: String,
 
-    /// Audio bitrate
+    /// Audio bitrate for lossy formats.
+    ///
+    /// Specified with a 'k' suffix (e.g., `"320k"`, `"256k"`, `"192k"`).
+    /// Defaults to `"320k"` for high-quality audio. Ignored for lossless formats.
     #[serde(default = "AudioConfig::default_bitrate")]
     pub bitrate: String,
 }
 
-/// Video-specific settings
+/// Video-specific download settings.
+///
+/// Controls the format and additional content (thumbnails, subtitles) for video downloads.
+///
+/// # Default Values
+///
+/// - `format`: `"mp4"`
+/// - `include_thumbnail`: `true`
+/// - `include_subtitles`: `true`
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct VideoConfig {
-    /// Default video format
+    /// Default video container format.
+    ///
+    /// Supported formats include `"mp4"`, `"mkv"`, and `"webm"`.
+    /// Defaults to `"mp4"` for maximum compatibility.
     #[serde(default = "VideoConfig::default_format")]
     pub format: String,
 
-    /// Include thumbnail in download
+    /// Whether to download video thumbnails.
+    ///
+    /// When `true`, saves the video thumbnail as a separate image file.
+    /// Defaults to `true`.
     #[serde(default = "VideoConfig::default_include_thumbnail")]
     pub include_thumbnail: bool,
 
-    /// Include subtitles in download
+    /// Whether to download subtitles/closed captions.
+    ///
+    /// When `true`, downloads all available subtitle tracks.
+    /// Defaults to `true`.
     #[serde(default = "VideoConfig::default_include_subtitles")]
     pub include_subtitles: bool,
 }
 
-/// Network-related settings
+/// Network and connection settings.
+///
+/// Controls download behavior including rate limiting, retry logic, and timeouts.
+///
+/// # Default Values
+///
+/// - `rate_limit`: `None` (unlimited)
+/// - `retry_attempts`: `3`
+/// - `timeout`: `300` (5 minutes)
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct NetworkConfig {
-    /// Download rate limit (e.g., "5M" for 5 MB/s)
+    /// Download rate limit.
+    ///
+    /// Specified as a string with units (e.g., `"5M"` for 5 MB/s, `"500K"` for 500 KB/s).
+    /// `None` means no rate limiting. Use `"none"` or empty string to disable in TOML.
     #[serde(default)]
     pub rate_limit: Option<String>,
 
-    /// Number of retry attempts
+    /// Number of retry attempts for failed downloads.
+    ///
+    /// If a download fails due to transient network issues, it will be retried
+    /// this many times before giving up. Defaults to `3`.
     #[serde(default = "NetworkConfig::default_retry_attempts")]
     pub retry_attempts: u32,
 
-    /// Connection timeout in seconds
+    /// Connection timeout in seconds.
+    ///
+    /// Maximum time to wait for network operations before timing out.
+    /// Defaults to `300` seconds (5 minutes).
     #[serde(default = "NetworkConfig::default_timeout")]
     pub timeout: u64,
 }
@@ -187,6 +334,25 @@ impl NetworkConfig {
 // ============== Config Implementation ==============
 
 impl Config {
+    /// Returns the path to the configuration file.
+    ///
+    /// The configuration file is stored at:
+    /// - Linux/macOS: `~/.config/rust-yt-downloader/config.toml`
+    /// - Windows: `%APPDATA%\rust-yt-downloader\config.toml`
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the system config directory cannot be determined.
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// use rust_yt_downloader::config::Config;
+    ///
+    /// let path = Config::config_path()?;
+    /// println!("Config file: {}", path.display());
+    /// # Ok::<(), rust_yt_downloader::error::AppError>(())
+    /// ```
     pub fn config_path() -> AppResult<PathBuf> {
         let config_dir = dirs::config_dir()
             .ok_or_else(|| AppError::Other("Could not find config directory".to_string()))?;
@@ -194,6 +360,27 @@ impl Config {
         Ok(config_dir.join("rust-yt-downloader").join("config.toml"))
     }
 
+    /// Loads configuration from disk, or returns defaults if the file doesn't exist.
+    ///
+    /// This method will create the configuration file with default values on first use.
+    /// If the file exists but contains invalid TOML, an error is returned.
+    ///
+    /// # Errors
+    ///
+    /// - Returns an error if the config file exists but cannot be read
+    /// - Returns an error if the config file contains invalid TOML syntax
+    /// - Returns an error if the system config directory cannot be determined
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// use rust_yt_downloader::config::Config;
+    ///
+    /// // Load existing config or use defaults
+    /// let config = Config::load()?;
+    /// println!("Output directory: {}", config.general.output_dir);
+    /// # Ok::<(), rust_yt_downloader::error::AppError>(())
+    /// ```
     pub fn load() -> AppResult<Self> {
         let path = Self::config_path()?;
 
@@ -211,6 +398,27 @@ impl Config {
         Ok(config)
     }
 
+    /// Saves the configuration to disk.
+    ///
+    /// Creates the configuration directory if it doesn't exist. The configuration
+    /// is written in TOML format with pretty-printing for readability.
+    ///
+    /// # Errors
+    ///
+    /// - Returns an error if the config directory cannot be created
+    /// - Returns an error if the config file cannot be written
+    /// - Returns an error if the configuration cannot be serialized to TOML
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// use rust_yt_downloader::config::Config;
+    ///
+    /// let mut config = Config::load()?;
+    /// config.general.default_quality = "1080p".to_string();
+    /// config.save()?;
+    /// # Ok::<(), rust_yt_downloader::error::AppError>(())
+    /// ```
     pub fn save(&self) -> AppResult<()> {
         let path = Self::config_path()?;
 
@@ -227,12 +435,57 @@ impl Config {
         Ok(())
     }
 
+    /// Resets configuration to default values and saves to disk.
+    ///
+    /// This will overwrite any existing configuration file with the defaults.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the config file cannot be written (see [`Config::save()`]).
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// use rust_yt_downloader::config::Config;
+    ///
+    /// // Reset to defaults
+    /// let config = Config::reset()?;
+    /// assert_eq!(config.general.default_quality, "best");
+    /// # Ok::<(), rust_yt_downloader::error::AppError>(())
+    /// ```
     pub fn reset() -> AppResult<Self> {
         let config = Self::default();
         config.save()?;
         Ok(config)
     }
 
+    /// Gets a configuration value by dot-notation key.
+    ///
+    /// Returns the value as a string, or `None` if the key doesn't exist.
+    /// All values are converted to strings, including booleans and numbers.
+    ///
+    /// # Supported Keys
+    ///
+    /// Use [`Config::keys()`] to get a complete list of valid keys.
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// use rust_yt_downloader::config::Config;
+    ///
+    /// let config = Config::load()?;
+    ///
+    /// // Get various configuration values
+    /// let quality = config.get("general.default_quality");
+    /// assert_eq!(quality, Some("best".to_string()));
+    ///
+    /// let parallel = config.get("general.max_parallel_downloads");
+    /// assert_eq!(parallel, Some("3".to_string()));
+    ///
+    /// // Unknown keys return None
+    /// assert_eq!(config.get("unknown.key"), None);
+    /// # Ok::<(), rust_yt_downloader::error::AppError>(())
+    /// ```
     pub fn get(&self, key: &str) -> Option<String> {
         let parts: Vec<&str> = key.split('.').collect();
 
@@ -258,6 +511,41 @@ impl Config {
         }
     }
 
+    /// Sets a configuration value by dot-notation key.
+    ///
+    /// The value is parsed according to the field type. For numeric fields,
+    /// the value must be a valid integer. For boolean fields, the value must
+    /// be `"true"` or `"false"`.
+    ///
+    /// Note: This method does **not** save the configuration to disk.
+    /// Call [`Config::save()`] after making changes.
+    ///
+    /// # Errors
+    ///
+    /// - Returns an error if the key is unknown
+    /// - Returns an error if the value cannot be parsed for the field type
+    ///   (e.g., `"abc"` for a numeric field)
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// use rust_yt_downloader::config::Config;
+    ///
+    /// let mut config = Config::load()?;
+    ///
+    /// // Set various configuration values
+    /// config.set("general.default_quality", "1080p")?;
+    /// config.set("general.max_parallel_downloads", "5")?;
+    /// config.set("video.include_thumbnail", "false")?;
+    /// config.set("network.rate_limit", "5M")?;
+    ///
+    /// // Clear optional values with "none" or empty string
+    /// config.set("network.rate_limit", "none")?;
+    ///
+    /// // Save changes to disk
+    /// config.save()?;
+    /// # Ok::<(), rust_yt_downloader::error::AppError>(())
+    /// ```
     pub fn set(&mut self, key: &str, value: &str) -> AppResult<()> {
         let parts: Vec<&str> = key.split('.').collect();
 
@@ -333,6 +621,19 @@ impl Config {
         Ok(())
     }
 
+    /// Returns a list of all valid configuration keys.
+    ///
+    /// These keys can be used with [`Config::get()`] and [`Config::set()`].
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// use rust_yt_downloader::config::Config;
+    ///
+    /// for key in Config::keys() {
+    ///     println!("{}", key);
+    /// }
+    /// ```
     pub fn keys() -> Vec<&'static str> {
         vec![
             "general.output_dir",

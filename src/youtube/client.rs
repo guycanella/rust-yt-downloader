@@ -1,15 +1,86 @@
+//! YouTube client using the rustube library.
+//!
+//! This module provides a client for fetching YouTube video information using
+//! the rustube library. It handles URL validation, video ID extraction, and
+//! stream metadata retrieval.
+//!
+//! # URL Validation
+//!
+//! The client supports multiple YouTube URL formats:
+//! - Standard: `https://www.youtube.com/watch?v=VIDEO_ID`
+//! - Short: `https://youtu.be/VIDEO_ID`
+//! - Embed: `https://www.youtube.com/embed/VIDEO_ID`
+//! - Mobile: `https://m.youtube.com/watch?v=VIDEO_ID`
+//! - With parameters: URLs containing timestamps, playlists, etc.
+
 use rustube::{Id, Video};
 
 use crate::error::{AppError, AppResult};
 use crate::youtube::metadata::{StreamInfo, VideoInfo};
 
+/// YouTube client for fetching video information via rustube.
+///
+/// This client provides methods to validate YouTube URLs, extract video metadata,
+/// and retrieve available streams. It uses the rustube library internally.
+///
+/// # Examples
+///
+/// ```no_run
+/// # use rust_yt_downloader::youtube::YouTubeClient;
+/// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+/// let client = YouTubeClient::new();
+///
+/// // Get video information
+/// let info = client.get_video_info("https://www.youtube.com/watch?v=dQw4w9WgXcQ").await?;
+/// println!("Title: {}", info.title);
+/// println!("Duration: {} seconds", info.duration);
+///
+/// // Get available streams
+/// let streams = client.get_streams("https://www.youtube.com/watch?v=dQw4w9WgXcQ").await?;
+/// for stream in streams {
+///     println!("{}", stream.description());
+/// }
+/// # Ok(())
+/// # }
+/// ```
 pub struct YouTubeClient;
 
 impl YouTubeClient {
+    /// Creates a new YouTube client instance.
     pub fn new() -> Self {
         Self
     }
 
+    /// Fetches complete video information including metadata and available streams.
+    ///
+    /// Retrieves all video details such as title, description, duration, channel,
+    /// view count, and all available streams with their quality information.
+    ///
+    /// # Arguments
+    ///
+    /// * `url` - A valid YouTube video URL in any supported format
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    /// - The URL is invalid or malformed
+    /// - The video ID cannot be extracted
+    /// - The video is unavailable or private
+    /// - Network errors occur during fetching
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// # use rust_yt_downloader::youtube::YouTubeClient;
+    /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+    /// let client = YouTubeClient::new();
+    /// let info = client.get_video_info("https://www.youtube.com/watch?v=dQw4w9WgXcQ").await?;
+    ///
+    /// println!("Video: {}", info.title);
+    /// println!("Available qualities: {:?}", info.available_qualities());
+    /// # Ok(())
+    /// # }
+    /// ```
     pub async fn get_video_info(&self, url: &str) -> AppResult<VideoInfo> {
         let id = Self::extract_id(url)?;
 
@@ -33,21 +104,72 @@ impl YouTubeClient {
         })
     }
 
+    /// Fetches only the stream information for a video.
+    ///
+    /// This is a convenience method that retrieves video info and returns
+    /// just the streams vector.
+    ///
+    /// # Arguments
+    ///
+    /// * `url` - A valid YouTube video URL
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// # use rust_yt_downloader::youtube::YouTubeClient;
+    /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+    /// let client = YouTubeClient::new();
+    /// let streams = client.get_streams("https://www.youtube.com/watch?v=dQw4w9WgXcQ").await?;
+    ///
+    /// for stream in &streams {
+    ///     if !stream.is_audio_only {
+    ///         println!("{}", stream.quality);
+    ///     }
+    /// }
+    /// # Ok(())
+    /// # }
+    /// ```
     pub async fn get_streams(&self, url: &str) -> AppResult<Vec<StreamInfo>> {
         let info = self.get_video_info(url).await?;
         Ok(info.streams)
     }
 
+    /// Validates whether a URL is a valid YouTube video URL.
+    ///
+    /// Checks if the URL can be parsed and a video ID can be extracted.
+    /// Does not verify if the video actually exists or is accessible.
+    ///
+    /// # Arguments
+    ///
+    /// * `url` - The URL to validate
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use rust_yt_downloader::youtube::YouTubeClient;
+    ///
+    /// assert!(YouTubeClient::is_valid_url("https://www.youtube.com/watch?v=dQw4w9WgXcQ"));
+    /// assert!(YouTubeClient::is_valid_url("https://youtu.be/dQw4w9WgXcQ"));
+    /// assert!(!YouTubeClient::is_valid_url("https://vimeo.com/123456"));
+    /// ```
     pub fn is_valid_url(url: &str) -> bool {
         Self::extract_id(url).is_ok()
     }
 
+    /// Extracts the YouTube video ID from a URL.
+    ///
+    /// Supports multiple URL formats and returns a static-lifetime ID
+    /// that can be used with the rustube library.
     fn extract_id(url: &str) -> AppResult<Id<'static>> {
         Id::from_raw(url)
             .map(|id| id.as_owned())
             .map_err(|_| AppError::InvalidUrl(url.to_string()))
     }
 
+    /// Extracts stream information from a rustube Video object.
+    ///
+    /// Converts rustube's internal stream representation to our StreamInfo
+    /// structure, handling codec detection and quality labeling.
     fn extract_streams(video: &Video) -> Vec<StreamInfo> {
         video
             .streams()
@@ -97,6 +219,27 @@ impl Default for YouTubeClient {
     }
 }
 
+/// Validates a YouTube URL and returns a Result.
+///
+/// This is a convenience function that wraps `YouTubeClient::is_valid_url`
+/// and returns an appropriate error if the URL is invalid.
+///
+/// # Arguments
+///
+/// * `url` - The URL to validate
+///
+/// # Errors
+///
+/// Returns `AppError::InvalidUrl` if the URL is not a valid YouTube video URL.
+///
+/// # Examples
+///
+/// ```
+/// use rust_yt_downloader::youtube::validate_youtube_url;
+///
+/// assert!(validate_youtube_url("https://www.youtube.com/watch?v=dQw4w9WgXcQ").is_ok());
+/// assert!(validate_youtube_url("https://invalid.com/video").is_err());
+/// ```
 pub fn validate_youtube_url(url: &str) -> AppResult<()> {
     if !YouTubeClient::is_valid_url(url) {
         return Err(AppError::InvalidUrl(url.to_string()));
