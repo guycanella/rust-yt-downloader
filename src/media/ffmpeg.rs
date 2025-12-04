@@ -647,14 +647,14 @@ mod tests {
     fn test_ffmpeg_is_available() {
         let available = FFmpeg::is_available();
         println!("FFmpeg available: {}", available);
-        assert!(available || !available);
+        // Test just ensures the function doesn't panic
     }
 
     #[test]
     fn test_ffmpeg_is_probe_available() {
         let available = FFmpeg::is_probe_available();
         println!("FFprobe available: {}", available);
-        assert!(available || !available);
+        // Test just ensures the function doesn't panic
     }
 
     #[test]

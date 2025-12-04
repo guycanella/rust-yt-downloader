@@ -429,20 +429,20 @@ mod tests {
 
     #[test]
     fn test_is_valid_url_http_instead_of_https() {
-        let result = YouTubeClient::is_valid_url("http://www.youtube.com/watch?v=dQw4w9WgXcQ");
-        assert!(result || !result);
+        let _result = YouTubeClient::is_valid_url("http://www.youtube.com/watch?v=dQw4w9WgXcQ");
+        // Test just ensures the function doesn't panic
     }
 
     #[test]
     fn test_is_valid_url_mobile() {
-        let result = YouTubeClient::is_valid_url("https://m.youtube.com/watch?v=dQw4w9WgXcQ");
-        assert!(result || !result);
+        let _result = YouTubeClient::is_valid_url("https://m.youtube.com/watch?v=dQw4w9WgXcQ");
+        // Test just ensures the function doesn't panic
     }
 
     #[test]
     fn test_is_valid_url_music() {
-        let result = YouTubeClient::is_valid_url("https://music.youtube.com/watch?v=dQw4w9WgXcQ");
-        assert!(result || !result);
+        let _result = YouTubeClient::is_valid_url("https://music.youtube.com/watch?v=dQw4w9WgXcQ");
+        // Test just ensures the function doesn't panic
     }
 
     #[test]
