@@ -294,7 +294,11 @@ impl VideoConverter {
     /// VideoConverter::convert("input.avi", "output.mp4", &options)?;
     /// # Ok::<(), rust_yt_downloader::error::AppError>(())
     /// ```
-    pub fn convert<P: AsRef<Path>>(input: P, output: P, options: &ConversionOptions) -> AppResult<()> {
+    pub fn convert<P: AsRef<Path>>(
+        input: P,
+        output: P,
+        options: &ConversionOptions,
+    ) -> AppResult<()> {
         FFmpeg::require()?;
 
         let input_str = input.as_ref().to_string_lossy();
@@ -394,10 +398,11 @@ impl VideoConverter {
         let input_path = input.as_ref();
         let stem = input_path.file_stem().unwrap_or_default();
 
-        input_path
-            .parent()
-            .unwrap_or(Path::new("."))
-            .join(format!("{}.{}", stem.to_string_lossy(), format.extension()))
+        input_path.parent().unwrap_or(Path::new(".")).join(format!(
+            "{}.{}",
+            stem.to_string_lossy(),
+            format.extension()
+        ))
     }
 
     /// Determines if re-encoding is required for the conversion.
@@ -867,8 +872,7 @@ mod tests {
 
     #[test]
     fn test_output_path_with_spaces() {
-        let output =
-            VideoConverter::output_path_with_format("my video file.mp4", VideoFormat::Mkv);
+        let output = VideoConverter::output_path_with_format("my video file.mp4", VideoFormat::Mkv);
         assert!(output.to_string_lossy().contains("my video file"));
         assert!(output.to_string_lossy().ends_with(".mkv"));
     }
@@ -883,36 +887,66 @@ mod tests {
 
     #[test]
     fn test_needs_reencode_same_format() {
-        assert!(!VideoConverter::needs_reencode("video.mp4", VideoFormat::Mp4));
-        assert!(!VideoConverter::needs_reencode("video.mkv", VideoFormat::Mkv));
+        assert!(!VideoConverter::needs_reencode(
+            "video.mp4",
+            VideoFormat::Mp4
+        ));
+        assert!(!VideoConverter::needs_reencode(
+            "video.mkv",
+            VideoFormat::Mkv
+        ));
     }
 
     #[test]
     fn test_needs_reencode_to_mkv() {
-        assert!(!VideoConverter::needs_reencode("video.mp4", VideoFormat::Mkv));
-        assert!(!VideoConverter::needs_reencode("video.webm", VideoFormat::Mkv));
+        assert!(!VideoConverter::needs_reencode(
+            "video.mp4",
+            VideoFormat::Mkv
+        ));
+        assert!(!VideoConverter::needs_reencode(
+            "video.webm",
+            VideoFormat::Mkv
+        ));
     }
 
     #[test]
     fn test_needs_reencode_mp4_to_mov() {
-        assert!(!VideoConverter::needs_reencode("video.mp4", VideoFormat::Mov));
+        assert!(!VideoConverter::needs_reencode(
+            "video.mp4",
+            VideoFormat::Mov
+        ));
     }
 
     #[test]
     fn test_needs_reencode_mov_to_mp4() {
-        assert!(!VideoConverter::needs_reencode("video.mov", VideoFormat::Mp4));
+        assert!(!VideoConverter::needs_reencode(
+            "video.mov",
+            VideoFormat::Mp4
+        ));
     }
 
     #[test]
     fn test_needs_reencode_incompatible() {
-        assert!(VideoConverter::needs_reencode("video.mp4", VideoFormat::Webm));
-        assert!(VideoConverter::needs_reencode("video.webm", VideoFormat::Mp4));
-        assert!(VideoConverter::needs_reencode("video.avi", VideoFormat::Webm));
+        assert!(VideoConverter::needs_reencode(
+            "video.mp4",
+            VideoFormat::Webm
+        ));
+        assert!(VideoConverter::needs_reencode(
+            "video.webm",
+            VideoFormat::Mp4
+        ));
+        assert!(VideoConverter::needs_reencode(
+            "video.avi",
+            VideoFormat::Webm
+        ));
     }
 
     #[test]
     fn test_needs_reencode_unknown_format() {
-        assert!(VideoConverter::needs_reencode("video.xyz", VideoFormat::Mp4));
+        assert!(VideoConverter::needs_reencode(
+            "video.xyz",
+            VideoFormat::Mp4
+        ));
     }
 
     #[test]
@@ -1006,10 +1040,8 @@ mod tests {
                 return;
             }
 
-            let result = VideoConverter::convert_fast(
-                "/nonexistent/input.mp4",
-                "/nonexistent/output.mkv",
-            );
+            let result =
+                VideoConverter::convert_fast("/nonexistent/input.mp4", "/nonexistent/output.mkv");
 
             assert!(result.is_err());
         }
@@ -1069,13 +1101,7 @@ mod tests {
 
     #[test]
     fn test_conversion_options_various_resolutions() {
-        let resolutions = vec![
-            "640x480",
-            "1280x720",
-            "1920x1080",
-            "2560x1440",
-            "3840x2160",
-        ];
+        let resolutions = vec!["640x480", "1280x720", "1920x1080", "2560x1440", "3840x2160"];
 
         for resolution in resolutions {
             let options = ConversionOptions::default().with_resolution(resolution);

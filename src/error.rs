@@ -47,8 +47,8 @@
 //! assert!(!err.is_retryable());  // Invalid URLs won't work on retry
 //! ```
 
-use thiserror::Error;
 use std::path::PathBuf;
+use thiserror::Error;
 
 /// Result type alias using [`AppError`] as the error type.
 ///
@@ -78,7 +78,6 @@ pub type AppResult<T> = std::result::Result<T, AppError>;
 #[derive(Error, Debug)]
 pub enum AppError {
     // ============== Network/HTTP Errors ==============
-
     /// HTTP request failed with a specific status code.
     ///
     /// Includes both the HTTP status code and a descriptive message.
@@ -104,7 +103,6 @@ pub enum AppError {
     Network(#[from] reqwest::Error),
 
     // ============== YouTube Errors ==============
-
     /// The provided URL is not a valid YouTube URL.
     #[error("Invalid YouTube URL: {0}")]
     InvalidUrl(String),
@@ -138,7 +136,6 @@ pub enum AppError {
     YouTube(#[from] rustube::Error),
 
     // ============== Filesystem Errors ==============
-
     /// Failed to read a file from disk.
     #[error("Failed to read file: {path}")]
     FileRead {
@@ -176,7 +173,6 @@ pub enum AppError {
     Io(#[from] std::io::Error),
 
     // ============== FFmpeg Errors ==============
-
     /// FFmpeg executable was not found in system PATH.
     #[error("FFmpeg not found. Please install FFmpeg and ensure it's in your PATH")]
     FfmpegNotFound,
@@ -185,7 +181,7 @@ pub enum AppError {
     #[error("FFmpeg command failed: {message}")]
     FfmpegExecution {
         message: String,
-        exit_code: Option<i32>
+        exit_code: Option<i32>,
     },
 
     /// Media format conversion failed.
@@ -207,7 +203,6 @@ pub enum AppError {
     },
 
     // ============== Configuration Errors ==============
-
     /// Failed to parse the TOML configuration file.
     #[error("Failed to parse config file: {path}")]
     ConfigParse {
@@ -229,7 +224,6 @@ pub enum AppError {
     ConfigNotFound(PathBuf),
 
     // ============== Download Errors ==============
-
     /// No video streams available for download.
     #[error("No streams available for video: {video_id}")]
     NoStreamsAvailable { video_id: String },
@@ -254,7 +248,6 @@ pub enum AppError {
     MaxRetriesExceeded { attempts: u32, message: String },
 
     // ============== Validation Errors ==============
-
     /// Invalid command-line argument provided.
     #[error("Invalid argument: {argument} - {message}")]
     InvalidArgument { argument: String, message: String },
@@ -268,7 +261,6 @@ pub enum AppError {
     InvalidTemplate { template: String, message: String },
 
     // ============== Generic Errors ==============
-
     /// User cancelled the operation.
     #[error("Operation cancelled by user")]
     Cancelled,

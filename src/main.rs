@@ -171,14 +171,8 @@ async fn handle_download(
 
     if !silence {
         println!();
-        messages::success(&format!(
-            "Downloaded: {}",
-            result.file_path.display()
-        ));
-        messages::info(&format!(
-            "Size: {}",
-            utils::format_bytes(result.file_size)
-        ));
+        messages::success(&format!("Downloaded: {}", result.file_path.display()));
+        messages::info(&format!("Size: {}", utils::format_bytes(result.file_size)));
     }
 
     Ok(())
@@ -209,14 +203,8 @@ async fn handle_audio(
 
     if !silence {
         println!();
-        messages::success(&format!(
-            "Downloaded: {}",
-            result.file_path.display()
-        ));
-        messages::info(&format!(
-            "Size: {}",
-            utils::format_bytes(result.file_size)
-        ));
+        messages::success(&format!("Downloaded: {}", result.file_path.display()));
+        messages::info(&format!("Size: {}", utils::format_bytes(result.file_size)));
     }
 
     Ok(())
@@ -334,7 +322,7 @@ async fn handle_info(url: &str) -> AppResult<()> {
 
     println!();
     println!("{}", "Available Qualities:".yellow().bold());
-    
+
     let qualities = video.available_qualities();
     if qualities.is_empty() {
         println!("  No video streams available");
@@ -346,12 +334,8 @@ async fn handle_info(url: &str) -> AppResult<()> {
 
     println!();
     println!("{}", "Audio Streams:".yellow().bold());
-    
-    let audio_streams: Vec<_> = video
-        .streams
-        .iter()
-        .filter(|s| s.is_audio_only)
-        .collect();
+
+    let audio_streams: Vec<_> = video.streams.iter().filter(|s| s.is_audio_only).collect();
 
     if audio_streams.is_empty() {
         println!("  No audio-only streams available");
@@ -376,10 +360,10 @@ fn handle_config(command: ConfigCommands) -> AppResult<()> {
     match command {
         ConfigCommands::Show => {
             let config = Config::load()?;
-            
+
             println!("{}", "Current Configuration:".yellow().bold());
             println!();
-            
+
             for key in Config::keys() {
                 if let Some(value) = config.get(key) {
                     println!("  {}: {}", key.cyan(), value);
@@ -391,7 +375,7 @@ fn handle_config(command: ConfigCommands) -> AppResult<()> {
 
         ConfigCommands::Get { key } => {
             let config = Config::load()?;
-            
+
             match config.get(&key) {
                 Some(value) => println!("{}", value),
                 None => {
@@ -407,7 +391,7 @@ fn handle_config(command: ConfigCommands) -> AppResult<()> {
             let mut config = Config::load()?;
             config.set(&key, &value)?;
             config.save()?;
-            
+
             messages::success(&format!("{} set to {}", key, value));
         }
 

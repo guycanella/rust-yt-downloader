@@ -47,7 +47,7 @@ pub mod utils;
 pub mod youtube;
 
 // Re-export commonly used types for convenience
+pub use config::Config;
+pub use downloader::Downloader;
 pub use error::{AppError, AppResult};
 pub use youtube::YouTubeClient;
-pub use downloader::Downloader;
-pub use config::Config;

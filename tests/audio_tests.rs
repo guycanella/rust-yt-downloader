@@ -1,6 +1,6 @@
 mod common;
 
-use common::{run_ytdl, ytdlp_available, create_temp_dir, TEST_VIDEO_SHORT};
+use common::{create_temp_dir, run_ytdl, ytdlp_available, TEST_VIDEO_SHORT};
 use std::fs;
 
 // ============== Helper ==============
@@ -28,17 +28,28 @@ fn test_audio_download_mp3() {
     let output = run_ytdl(&[
         "audio",
         TEST_VIDEO_SHORT,
-        "-o", &output_path,
-        "-f", "mp3",
-        "-s"
+        "-o",
+        &output_path,
+        "-f",
+        "mp3",
+        "-s",
     ]);
 
-    assert!(output.status.success(), "Audio download failed: {:?}", String::from_utf8_lossy(&output.stderr));
+    assert!(
+        output.status.success(),
+        "Audio download failed: {:?}",
+        String::from_utf8_lossy(&output.stderr)
+    );
 
     let files: Vec<_> = fs::read_dir(temp_dir.path())
         .unwrap()
         .filter_map(|e| e.ok())
-        .filter(|e| e.path().extension().map(|ext| ext == "mp3").unwrap_or(false))
+        .filter(|e| {
+            e.path()
+                .extension()
+                .map(|ext| ext == "mp3")
+                .unwrap_or(false)
+        })
         .collect();
 
     assert!(!files.is_empty(), "No MP3 file found");
@@ -56,9 +67,11 @@ fn test_audio_download_m4a() {
     let output = run_ytdl(&[
         "audio",
         TEST_VIDEO_SHORT,
-        "-o", &output_path,
-        "-f", "m4a",
-        "-s"
+        "-o",
+        &output_path,
+        "-f",
+        "m4a",
+        "-s",
     ]);
 
     assert!(output.status.success());
@@ -66,7 +79,12 @@ fn test_audio_download_m4a() {
     let files: Vec<_> = fs::read_dir(temp_dir.path())
         .unwrap()
         .filter_map(|e| e.ok())
-        .filter(|e| e.path().extension().map(|ext| ext == "m4a").unwrap_or(false))
+        .filter(|e| {
+            e.path()
+                .extension()
+                .map(|ext| ext == "m4a")
+                .unwrap_or(false)
+        })
         .collect();
 
     assert!(!files.is_empty(), "No M4A file found");
@@ -84,9 +102,11 @@ fn test_audio_download_opus() {
     let output = run_ytdl(&[
         "audio",
         TEST_VIDEO_SHORT,
-        "-o", &output_path,
-        "-f", "opus",
-        "-s"
+        "-o",
+        &output_path,
+        "-f",
+        "opus",
+        "-s",
     ]);
 
     assert!(output.status.success());
@@ -111,9 +131,11 @@ fn test_audio_download_wav() {
     let output = run_ytdl(&[
         "audio",
         TEST_VIDEO_SHORT,
-        "-o", &output_path,
-        "-f", "wav",
-        "-s"
+        "-o",
+        &output_path,
+        "-f",
+        "wav",
+        "-s",
     ]);
 
     assert!(output.status.success());
@@ -121,7 +143,12 @@ fn test_audio_download_wav() {
     let files: Vec<_> = fs::read_dir(temp_dir.path())
         .unwrap()
         .filter_map(|e| e.ok())
-        .filter(|e| e.path().extension().map(|ext| ext == "wav").unwrap_or(false))
+        .filter(|e| {
+            e.path()
+                .extension()
+                .map(|ext| ext == "wav")
+                .unwrap_or(false)
+        })
         .collect();
 
     assert!(!files.is_empty(), "No WAV file found");
@@ -139,9 +166,11 @@ fn test_audio_download_flac() {
     let output = run_ytdl(&[
         "audio",
         TEST_VIDEO_SHORT,
-        "-o", &output_path,
-        "-f", "flac",
-        "-s"
+        "-o",
+        &output_path,
+        "-f",
+        "flac",
+        "-s",
     ]);
 
     assert!(output.status.success());
@@ -149,7 +178,12 @@ fn test_audio_download_flac() {
     let files: Vec<_> = fs::read_dir(temp_dir.path())
         .unwrap()
         .filter_map(|e| e.ok())
-        .filter(|e| e.path().extension().map(|ext| ext == "flac").unwrap_or(false))
+        .filter(|e| {
+            e.path()
+                .extension()
+                .map(|ext| ext == "flac")
+                .unwrap_or(false)
+        })
         .collect();
 
     assert!(!files.is_empty(), "No FLAC file found");
@@ -168,9 +202,11 @@ fn test_audio_creates_output_dir() {
     let output = run_ytdl(&[
         "audio",
         TEST_VIDEO_SHORT,
-        "-o", &output_path,
-        "-f", "mp3",
-        "-s"
+        "-o",
+        &output_path,
+        "-f",
+        "mp3",
+        "-s",
     ]);
 
     assert!(output.status.success());
@@ -189,9 +225,11 @@ fn test_audio_silence_mode() {
     let output = run_ytdl(&[
         "audio",
         TEST_VIDEO_SHORT,
-        "-o", &output_path,
-        "-f", "mp3",
-        "-s"
+        "-o",
+        &output_path,
+        "-f",
+        "mp3",
+        "-s",
     ]);
 
     assert!(output.status.success());
@@ -223,19 +261,19 @@ fn test_audio_default_format() {
     let temp_dir = create_temp_dir();
     let output_path = temp_dir.path().to_string_lossy().to_string();
 
-    let output = run_ytdl(&[
-        "audio",
-        TEST_VIDEO_SHORT,
-        "-o", &output_path,
-        "-s"
-    ]);
+    let output = run_ytdl(&["audio", TEST_VIDEO_SHORT, "-o", &output_path, "-s"]);
 
     assert!(output.status.success());
 
     let files: Vec<_> = fs::read_dir(temp_dir.path())
         .unwrap()
         .filter_map(|e| e.ok())
-        .filter(|e| e.path().extension().map(|ext| ext == "mp3").unwrap_or(false))
+        .filter(|e| {
+            e.path()
+                .extension()
+                .map(|ext| ext == "mp3")
+                .unwrap_or(false)
+        })
         .collect();
 
     assert!(!files.is_empty(), "No MP3 file found (default format)");
@@ -253,9 +291,11 @@ fn test_audio_file_not_empty() {
     let output = run_ytdl(&[
         "audio",
         TEST_VIDEO_SHORT,
-        "-o", &output_path,
-        "-f", "mp3",
-        "-s"
+        "-o",
+        &output_path,
+        "-f",
+        "mp3",
+        "-s",
     ]);
 
     assert!(output.status.success());

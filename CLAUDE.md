@@ -109,10 +109,11 @@ The codebase follows a modular architecture with seven core modules organized in
    - Implements retry logic and error recovery
 
 5. **`youtube/`** - YouTube API integration (sub-modules)
-   - `client.rs` - Core YouTube client using `rustube` library, URL validation
+   - `ytdlp.rs` - Primary client using `yt-dlp` command-line tool (must be installed separately)
+   - `client.rs` - Alternative YouTube client using `rustube` library, URL validation
    - `metadata.rs` - Video metadata extraction (`VideoInfo`, `StreamInfo`, quality filtering)
    - `playlist.rs` - Playlist handling and video ID extraction
-   - Public exports: `YouTubeClient`, `VideoInfo`, `PlaylistInfo`, `QualityFilter`
+   - Public exports: `YtDlpClient`, `YouTubeClient`, `VideoInfo`, `PlaylistInfo`, `QualityFilter`
 
 6. **`media/`** - Media processing and conversion (sub-modules)
    - `ffmpeg.rs` - FFmpeg wrapper and command execution
@@ -137,8 +138,9 @@ The codebase follows a modular architecture with seven core modules organized in
 
 9. **`main.rs`** - Application entry point
    - Parses CLI arguments with `clap`
-   - Routes commands to appropriate handlers
-   - Currently minimal - orchestration will be added here
+   - Routes commands to appropriate handlers (download, audio, playlist, info, config)
+   - Implements `handle_download()`, `handle_audio()`, `handle_playlist()`, `handle_info()`, `handle_config()`
+   - Provides error handling and formatted output for all commands
 
 ### Data Flow Architecture
 
@@ -146,12 +148,11 @@ The codebase follows a modular architecture with seven core modules organized in
 1. `main.rs` → Parse CLI args with `clap`
 2. `config.rs` → Load and merge configuration
 3. `downloader.rs` → Create `DownloadOptions` from CLI + config
-4. `youtube/client.rs` → Fetch video metadata and stream URLs
-5. `youtube/metadata.rs` → Apply quality filtering
-6. `downloader.rs` → Stream download with `reqwest`
-7. `progress.rs` → Display progress bars via `indicatif`
-8. `media/audio.rs` or `media/converter.rs` → Post-processing with FFmpeg
-9. `utils.rs` → Generate final filename via template
+4. `youtube/ytdlp.rs` → Fetch video metadata and download via yt-dlp (primary method)
+5. `youtube/metadata.rs` → Apply quality filtering and extract stream information
+6. `progress.rs` → Display progress bars via `indicatif`
+7. `media/audio.rs` or `media/converter.rs` → Post-processing with FFmpeg (if needed)
+8. `utils.rs` → Generate final filename via template
 
 **Configuration Priority** (highest to lowest):
 1. CLI arguments (e.g., `-q 1080p`)
@@ -215,15 +216,17 @@ pub use client::{YouTubeClient, validate_youtube_url};
 ## Key Dependencies
 
 - **`clap`** (4.5) - CLI argument parsing with derive macros
-- **`rustube`** (0.6) - YouTube API client and video fetching
+- **`rustube`** (0.6) - YouTube API client (alternative to yt-dlp for specific use cases)
 - **`tokio`** (1.40) - Async runtime (features = ["full"])
 - **`reqwest`** (0.12) - HTTP client with streaming (features = ["stream", "json"])
-- **`serde`** + **`toml`** - Configuration serialization
+- **`serde`** + **`serde_json`** + **`toml`** - Configuration and JSON serialization
 - **`thiserror`** - Custom error types
 - **`anyhow`** - Flexible error handling
 - **`indicatif`** - Progress bars
 - **`colored`** - Terminal colors
 - **`dirs`** - Platform-specific directories
+- **`chrono`** - Date and time handling
+- **`regex`** - Regular expressions for URL parsing
 
 **Dev Dependencies**:
 - **`tokio-test`** - Testing utilities for async code
@@ -315,7 +318,21 @@ cargo test
 
 ## External Requirements
 
-**FFmpeg** - Required for audio extraction and video format conversion
+### yt-dlp (Primary - Required)
+The application primarily uses `yt-dlp` for downloading YouTube content:
+- The `youtube/ytdlp.rs` module wraps yt-dlp command-line execution
+- Handles video downloads, metadata extraction, and format selection
+- Must be installed and available in system PATH
+
+**Installation**:
+- Linux: `sudo apt install yt-dlp` or download from https://github.com/yt-dlp/yt-dlp
+- macOS: `brew install yt-dlp`
+- Windows: `choco install yt-dlp` or download from GitHub releases
+
+**Graceful Degradation**: The application checks for yt-dlp availability and returns appropriate errors if missing
+
+### FFmpeg (Required for post-processing)
+Required for audio extraction and video format conversion:
 - The `media/ffmpeg.rs` module wraps FFmpeg command-line execution
 - Audio extraction uses FFmpeg to convert to MP3, FLAC, M4A, WAV, or Opus
 - Video conversion supports MP4, MKV, and WebM container formats
@@ -333,7 +350,8 @@ cargo test
 ### Async Runtime
 - All I/O operations (network, filesystem) are async using `tokio`
 - HTTP requests use `reqwest` with streaming support for large downloads
-- YouTube API calls via `rustube` are async
+- YouTube operations via `yt-dlp` are command-line based (synchronous subprocess execution)
+- Alternative `rustube` client provides async YouTube API calls
 - Progress bars work concurrently with downloads using `tokio::spawn`
 
 ### Error Handling Philosophy

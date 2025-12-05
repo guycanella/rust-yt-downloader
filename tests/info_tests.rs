@@ -1,6 +1,6 @@
 mod common;
 
-use common::{run_ytdl, ytdlp_available, TEST_VIDEO_SHORT, TEST_VIDEO_INVALID};
+use common::{run_ytdl, ytdlp_available, TEST_VIDEO_INVALID, TEST_VIDEO_SHORT};
 
 // ============== Helper ==============
 

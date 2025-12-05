@@ -19,8 +19,8 @@
 //! - Process playlists with full video lists
 //! - Automatic quality string to yt-dlp format conversion
 
-use std::process::Command;
 use serde::Deserialize;
+use std::process::Command;
 
 use crate::error::{AppError, AppResult};
 use crate::youtube::metadata::{PlaylistInfo, StreamInfo, VideoInfo};
@@ -181,7 +181,8 @@ impl YtDlpClient {
     pub fn require() -> AppResult<()> {
         if !Self::is_available() {
             return Err(AppError::Other(
-                "yt-dlp is required but not installed. Install with: brew install yt-dlp".to_string()
+                "yt-dlp is required but not installed. Install with: brew install yt-dlp"
+                    .to_string(),
             ));
         }
         Ok(())
@@ -220,12 +221,7 @@ impl YtDlpClient {
         Self::require()?;
 
         let output = Command::new("yt-dlp")
-            .args([
-                "--dump-json",
-                "--no-warnings",
-                "--no-playlist",
-                url,
-            ])
+            .args(["--dump-json", "--no-warnings", "--no-playlist", url])
             .output()
             .map_err(|e| AppError::ExtractionFailed(e.to_string()))?;
 
@@ -276,12 +272,7 @@ impl YtDlpClient {
         Self::require()?;
 
         let output = Command::new("yt-dlp")
-            .args([
-                "--dump-json",
-                "--flat-playlist",
-                "--no-warnings",
-                url,
-            ])
+            .args(["--dump-json", "--flat-playlist", "--no-warnings", url])
             .output()
             .map_err(|e| AppError::ExtractionFailed(e.to_string()))?;
 
@@ -362,12 +353,7 @@ impl YtDlpClient {
     /// # Ok(())
     /// # }
     /// ```
-    pub fn download(
-        &self,
-        url: &str,
-        output_path: &str,
-        format: Option<&str>,
-    ) -> AppResult<()> {
+    pub fn download(&self, url: &str, output_path: &str, format: Option<&str>) -> AppResult<()> {
         Self::require()?;
 
         let mut args = vec![
@@ -431,12 +417,7 @@ impl YtDlpClient {
     /// # Ok(())
     /// # }
     /// ```
-    pub fn download_audio(
-        &self,
-        url: &str,
-        output_path: &str,
-        format: &str,
-    ) -> AppResult<()> {
+    pub fn download_audio(&self, url: &str, output_path: &str, format: &str) -> AppResult<()> {
         Self::require()?;
 
         let output = Command::new("yt-dlp")
@@ -505,14 +486,7 @@ impl YtDlpClient {
         let format_str = self.quality_to_format(quality);
 
         let output = Command::new("yt-dlp")
-            .args([
-                "--no-warnings",
-                "-f",
-                &format_str,
-                "-o",
-                output_path,
-                url,
-            ])
+            .args(["--no-warnings", "-f", &format_str, "-o", output_path, url])
             .output()
             .map_err(|e| AppError::ExtractionFailed(e.to_string()))?;
 
@@ -556,8 +530,8 @@ impl YtDlpClient {
     fn convert_to_stream_info(&self, f: YtDlpFormat) -> Option<StreamInfo> {
         let url = f.url?;
 
-        let is_audio_only = f.vcodec.as_deref() == Some("none")
-            || (f.height.is_none() && f.acodec.is_some());
+        let is_audio_only =
+            f.vcodec.as_deref() == Some("none") || (f.height.is_none() && f.acodec.is_some());
 
         let quality = if is_audio_only {
             "audio".to_string()

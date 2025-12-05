@@ -25,8 +25,8 @@
 //! }
 //! ```
 
+use clap::{Args, Parser, Subcommand, ValueEnum};
 use std::path::PathBuf;
-use clap::{Parser, Subcommand, Args, ValueEnum};
 
 /// Main CLI structure for the YouTube downloader application.
 ///
@@ -34,7 +34,10 @@ use clap::{Parser, Subcommand, Args, ValueEnum};
 /// are defined as variants in the [`Commands`] enum.
 #[derive(Parser)]
 #[command(name = "ytdl")]
-#[command(version, about = "YouTube Downloader - Download videos and audio from YouTube")]
+#[command(
+    version,
+    about = "YouTube Downloader - Download videos and audio from YouTube"
+)]
 pub struct Cli {
     /// The subcommand to execute
     #[command(subcommand)]
@@ -86,10 +89,10 @@ pub enum Commands {
     ///
     /// Allows viewing and modifying the configuration file located at
     /// `~/.config/rust-yt-downloader/config.toml`.
-    Config{
+    Config {
         #[command(subcommand)]
         command: ConfigCommands,
-    }
+    },
 }
 
 /// Configuration subcommands for managing application settings.
@@ -108,20 +111,20 @@ pub enum ConfigCommands {
         /// Configuration key in dot notation (e.g., "general.default_quality")
         key: String,
         /// Value to set
-        value: String
+        value: String,
     },
 
     /// Get a specific configuration value
     Get {
         /// Configuration key in dot notation
-        key: String
+        key: String,
     },
 
     /// Reset configuration to default values
     Reset,
 
     /// Show the path to the configuration file
-    Path
+    Path,
 }
 
 /// Video quality options for downloads.
@@ -172,7 +175,7 @@ pub enum VideoQuality {
     Best,
 
     /// Automatically select the worst available quality (smallest file size)
-    Worst
+    Worst,
 }
 
 /// Audio format options for audio extraction.
@@ -199,7 +202,7 @@ pub enum AudioFormat {
     Wav,
 
     /// Opus format (modern lossy codec, good quality at low bitrates)
-    Opus
+    Opus,
 }
 
 /// Video container format options.
@@ -220,7 +223,7 @@ pub enum VideoFormat {
     Mkv,
 
     /// WebM container (open format, good for web)
-    Webm
+    Webm,
 }
 
 /// Common arguments shared across multiple commands.
@@ -394,8 +397,8 @@ mod tests {
 
     #[test]
     fn test_download_default_values() {
-        let cli =
-            Cli::try_parse_from(["ytdl", "download", "https://youtube.com/watch?v=abc123"]).unwrap();
+        let cli = Cli::try_parse_from(["ytdl", "download", "https://youtube.com/watch?v=abc123"])
+            .unwrap();
 
         match cli.command {
             Commands::Download(args) => {
@@ -690,8 +693,11 @@ mod tests {
 
     #[test]
     fn test_playlist_single_url() {
-        let cli =
-            Cli::try_parse_from(["ytdl", "playlist", "https://youtube.com/playlist?list=PL123"]);
+        let cli = Cli::try_parse_from([
+            "ytdl",
+            "playlist",
+            "https://youtube.com/playlist?list=PL123",
+        ]);
         assert!(cli.is_ok());
 
         match cli.unwrap().command {
@@ -727,9 +733,12 @@ mod tests {
 
     #[test]
     fn test_playlist_default_values() {
-        let cli =
-            Cli::try_parse_from(["ytdl", "playlist", "https://youtube.com/playlist?list=PL123"])
-                .unwrap();
+        let cli = Cli::try_parse_from([
+            "ytdl",
+            "playlist",
+            "https://youtube.com/playlist?list=PL123",
+        ])
+        .unwrap();
 
         match cli.command {
             Commands::Playlist(args) => {

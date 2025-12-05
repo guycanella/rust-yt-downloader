@@ -383,7 +383,11 @@ mod tests {
             url: format!("https://example.com/stream_{}", quality),
             quality: quality.to_string(),
             format: format.to_string(),
-            video_codec: if is_audio_only { None } else { Some("h264".to_string()) },
+            video_codec: if is_audio_only {
+                None
+            } else {
+                Some("h264".to_string())
+            },
             audio_codec: Some("aac".to_string()),
             is_audio_only,
             file_size: Some(1000000),
@@ -484,7 +488,9 @@ mod tests {
     #[test]
     fn test_best_video_stream_with_2160p() {
         let mut video = create_test_video_info();
-        video.streams.push(create_test_stream("2160p", "mp4", false));
+        video
+            .streams
+            .push(create_test_stream("2160p", "mp4", false));
 
         let best = video.best_video_stream();
 
@@ -495,7 +501,9 @@ mod tests {
     #[test]
     fn test_best_video_stream_with_1440p() {
         let mut video = create_test_video_info();
-        video.streams.push(create_test_stream("1440p", "mp4", false));
+        video
+            .streams
+            .push(create_test_stream("1440p", "mp4", false));
 
         let best = video.best_video_stream();
 
@@ -540,10 +548,7 @@ mod tests {
             channel: None,
             publish_date: None,
             view_count: None,
-            streams: vec![
-                create_test_audio_stream(320),
-                create_test_audio_stream(128),
-            ],
+            streams: vec![create_test_audio_stream(320), create_test_audio_stream(128)],
         };
 
         assert!(video.best_video_stream().is_none());
@@ -769,7 +774,9 @@ mod tests {
     #[test]
     fn test_available_qualities_no_duplicates() {
         let mut video = create_test_video_info();
-        video.streams.push(create_test_stream("720p", "webm", false));
+        video
+            .streams
+            .push(create_test_stream("720p", "webm", false));
 
         let qualities = video.available_qualities();
         let count_720p = qualities.iter().filter(|q| *q == "720p").count();
@@ -1017,7 +1024,10 @@ mod tests {
     #[test]
     fn test_quality_filter_max_height_equality() {
         assert_eq!(QualityFilter::MaxHeight(720), QualityFilter::MaxHeight(720));
-        assert_ne!(QualityFilter::MaxHeight(720), QualityFilter::MaxHeight(1080));
+        assert_ne!(
+            QualityFilter::MaxHeight(720),
+            QualityFilter::MaxHeight(1080)
+        );
     }
 
     #[test]

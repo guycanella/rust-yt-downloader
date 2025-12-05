@@ -1,6 +1,6 @@
 mod common;
 
-use common::{run_ytdl, ytdlp_available, create_temp_dir, TEST_VIDEO_SHORT};
+use common::{create_temp_dir, run_ytdl, ytdlp_available, TEST_VIDEO_SHORT};
 use std::fs;
 
 // ============== Helper ==============
@@ -27,7 +27,11 @@ fn test_download_video() {
 
     let output = run_ytdl(&["download", TEST_VIDEO_SHORT, "-o", &output_path, "-s"]);
 
-    assert!(output.status.success(), "Download failed: {:?}", String::from_utf8_lossy(&output.stderr));
+    assert!(
+        output.status.success(),
+        "Download failed: {:?}",
+        String::from_utf8_lossy(&output.stderr)
+    );
 
     let files: Vec<_> = fs::read_dir(temp_dir.path())
         .unwrap()
@@ -37,7 +41,12 @@ fn test_download_video() {
     assert!(!files.is_empty(), "No files downloaded");
 
     let file = &files[0];
-    let ext = file.path().extension().unwrap().to_string_lossy().to_string();
+    let ext = file
+        .path()
+        .extension()
+        .unwrap()
+        .to_string_lossy()
+        .to_string();
     assert!(
         ext == "mp4" || ext == "mkv" || ext == "webm",
         "Unexpected file extension: {}",
@@ -57,9 +66,11 @@ fn test_download_with_quality_720p() {
     let output = run_ytdl(&[
         "download",
         TEST_VIDEO_SHORT,
-        "-o", &output_path,
-        "-q", "720p",
-        "-s"
+        "-o",
+        &output_path,
+        "-q",
+        "720p",
+        "-s",
     ]);
 
     assert!(output.status.success());
@@ -84,9 +95,11 @@ fn test_download_with_format_mkv() {
     let output = run_ytdl(&[
         "download",
         TEST_VIDEO_SHORT,
-        "-o", &output_path,
-        "-f", "mkv",
-        "-s"
+        "-o",
+        &output_path,
+        "-f",
+        "mkv",
+        "-s",
     ]);
 
     assert!(output.status.success());
@@ -94,7 +107,12 @@ fn test_download_with_format_mkv() {
     let files: Vec<_> = fs::read_dir(temp_dir.path())
         .unwrap()
         .filter_map(|e| e.ok())
-        .filter(|e| e.path().extension().map(|ext| ext == "mkv").unwrap_or(false))
+        .filter(|e| {
+            e.path()
+                .extension()
+                .map(|ext| ext == "mkv")
+                .unwrap_or(false)
+        })
         .collect();
 
     assert!(!files.is_empty(), "No MKV file found");
@@ -112,9 +130,11 @@ fn test_download_with_format_webm() {
     let output = run_ytdl(&[
         "download",
         TEST_VIDEO_SHORT,
-        "-o", &output_path,
-        "-f", "webm",
-        "-s"
+        "-o",
+        &output_path,
+        "-f",
+        "webm",
+        "-s",
     ]);
 
     assert!(output.status.success());
@@ -186,9 +206,11 @@ fn test_download_worst_quality() {
     let output = run_ytdl(&[
         "download",
         TEST_VIDEO_SHORT,
-        "-o", &output_path,
-        "-q", "worst",
-        "-s"
+        "-o",
+        &output_path,
+        "-q",
+        "worst",
+        "-s",
     ]);
 
     assert!(output.status.success());
@@ -213,9 +235,11 @@ fn test_download_best_quality() {
     let output = run_ytdl(&[
         "download",
         TEST_VIDEO_SHORT,
-        "-o", &output_path,
-        "-q", "best",
-        "-s"
+        "-o",
+        &output_path,
+        "-q",
+        "best",
+        "-s",
     ]);
 
     assert!(output.status.success());

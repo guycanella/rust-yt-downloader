@@ -359,8 +359,7 @@ mod tests {
 
     #[test]
     fn test_get_playlist_id_invalid_no_list() {
-        let result =
-            PlaylistClient::get_playlist_id("https://www.youtube.com/watch?v=dQw4w9WgXcQ");
+        let result = PlaylistClient::get_playlist_id("https://www.youtube.com/watch?v=dQw4w9WgXcQ");
 
         assert!(result.is_err());
     }
@@ -407,9 +406,8 @@ mod tests {
 
     #[test]
     fn test_validate_playlist_url_invalid() {
-        let result = PlaylistClient::validate_playlist_url(
-            "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
-        );
+        let result =
+            PlaylistClient::validate_playlist_url("https://www.youtube.com/watch?v=dQw4w9WgXcQ");
 
         assert!(result.is_err());
     }
@@ -553,9 +551,7 @@ mod tests {
 
     #[test]
     fn test_filter_valid_playlist_urls_preserves_original() {
-        let urls = vec![
-            "https://www.youtube.com/playlist?list=PLtest&extra=param".to_string(),
-        ];
+        let urls = vec!["https://www.youtube.com/playlist?list=PLtest&extra=param".to_string()];
 
         let valid = filter_valid_playlist_urls(&urls);
 
@@ -613,9 +609,8 @@ mod tests {
 
     #[test]
     fn test_playlist_id_with_special_characters() {
-        let result = PlaylistClient::get_playlist_id(
-            "https://www.youtube.com/playlist?list=PL_abc-123_XYZ",
-        );
+        let result =
+            PlaylistClient::get_playlist_id("https://www.youtube.com/playlist?list=PL_abc-123_XYZ");
 
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), "PL_abc-123_XYZ");

@@ -189,11 +189,7 @@ impl YouTubeClient {
                         }
                     });
 
-                let format = stream
-                    .mime
-                    .subtype()
-                    .to_string()
-                    .to_lowercase();
+                let format = stream.mime.subtype().to_string().to_lowercase();
 
                 let is_audio_only = stream.includes_audio_track && !stream.includes_video_track;
 

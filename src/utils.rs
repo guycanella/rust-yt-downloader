@@ -7,9 +7,9 @@
 //! - YouTube video/playlist ID extraction from URLs
 //! - Template-based filename generation
 
-use std::path::PathBuf;
-use reqwest::Url;
 use chrono::{DateTime, Utc};
+use reqwest::Url;
+use std::path::PathBuf;
 
 use crate::error::{AppError, AppResult};
 
@@ -220,7 +220,8 @@ pub fn parse_duration(seconds: &str) -> AppResult<u64> {
     let parts: Vec<&str> = seconds.split(':').collect();
 
     let parse_part = |s: &str| -> AppResult<u64> {
-        s.parse().map_err(|_| AppError::InvalidTimeFormat(seconds.to_string()))
+        s.parse()
+            .map_err(|_| AppError::InvalidTimeFormat(seconds.to_string()))
     };
 
     match parts.len() {
@@ -231,7 +232,7 @@ pub fn parse_duration(seconds: &str) -> AppResult<u64> {
             Ok(hours * 3600 + minutes * 60 + seconds)
         }
         2 => {
-            let minutes = parse_part(parts[0])? ;
+            let minutes = parse_part(parts[0])?;
             let seconds = parse_part(parts[1])?;
             Ok(minutes * 60 + seconds)
         }
@@ -312,7 +313,8 @@ pub fn extract_video_id(url: &str) -> Option<String> {
 /// ```
 pub fn extract_playlist_id(url_str: &str) -> Option<String> {
     let parsed_url = Url::parse(url_str).ok()?;
-    parsed_url.query_pairs()
+    parsed_url
+        .query_pairs()
         .find(|(key, _)| key == "list")
         .map(|(_, value)| value.to_string())
 }
@@ -351,7 +353,8 @@ pub fn extract_playlist_id(url_str: &str) -> Option<String> {
 /// assert_eq!(filename, "My Video-abc123");
 /// ```
 pub fn apply_template(template: &str, meta: &VideoMetadata) -> String {
-    let date_str = meta.date
+    let date_str = meta
+        .date
         .map(|d| d.format("%Y-%m-%d").to_string())
         .unwrap_or_else(|| Utc::now().format("%Y-%m-%d").to_string());
 
@@ -745,8 +748,9 @@ mod tests {
 
     #[test]
     fn test_extract_video_id_with_extra_params() {
-        let result =
-            extract_video_id("https://www.youtube.com/watch?v=dQw4w9WgXcQ&list=PLrAXtmErZgOeiKm4sgNOknGvNjby9efdf");
+        let result = extract_video_id(
+            "https://www.youtube.com/watch?v=dQw4w9WgXcQ&list=PLrAXtmErZgOeiKm4sgNOknGvNjby9efdf",
+        );
         assert_eq!(result, Some("dQw4w9WgXcQ".to_string()));
     }
 
@@ -790,9 +794,13 @@ mod tests {
 
     #[test]
     fn test_extract_playlist_id_standard_url() {
-        let result =
-            extract_playlist_id("https://www.youtube.com/playlist?list=PLrAXtmErZgOeiKm4sgNOknGvNjby9efdf");
-        assert_eq!(result, Some("PLrAXtmErZgOeiKm4sgNOknGvNjby9efdf".to_string()));
+        let result = extract_playlist_id(
+            "https://www.youtube.com/playlist?list=PLrAXtmErZgOeiKm4sgNOknGvNjby9efdf",
+        );
+        assert_eq!(
+            result,
+            Some("PLrAXtmErZgOeiKm4sgNOknGvNjby9efdf".to_string())
+        );
     }
 
     #[test]
@@ -800,7 +808,10 @@ mod tests {
         let result = extract_playlist_id(
             "https://www.youtube.com/watch?v=dQw4w9WgXcQ&list=PLrAXtmErZgOeiKm4sgNOknGvNjby9efdf",
         );
-        assert_eq!(result, Some("PLrAXtmErZgOeiKm4sgNOknGvNjby9efdf".to_string()));
+        assert_eq!(
+            result,
+            Some("PLrAXtmErZgOeiKm4sgNOknGvNjby9efdf".to_string())
+        );
     }
 
     #[test]
@@ -911,7 +922,7 @@ mod tests {
             date: None,
             duration: None,
         };
-    
+
         let result = apply_template("{title}", &meta);
         assert_eq!(result, "My_ Video_ Name");
     }

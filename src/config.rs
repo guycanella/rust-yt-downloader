@@ -829,7 +829,10 @@ default_quality = "720p"
         let toml_string = toml::to_string_pretty(&original).unwrap();
         let parsed: Config = toml::from_str(&toml_string).unwrap();
 
-        assert_eq!(original.general.default_quality, parsed.general.default_quality);
+        assert_eq!(
+            original.general.default_quality,
+            parsed.general.default_quality
+        );
         assert_eq!(original.audio.format, parsed.audio.format);
         assert_eq!(original.video.format, parsed.video.format);
         assert_eq!(original.network.timeout, parsed.network.timeout);
@@ -1155,7 +1158,10 @@ default_quality = "720p"
     #[test]
     fn test_save_creates_file() {
         let temp_dir = TempDir::new().unwrap();
-        let config_path = temp_dir.path().join("rust-yt-downloader").join("config.toml");
+        let config_path = temp_dir
+            .path()
+            .join("rust-yt-downloader")
+            .join("config.toml");
 
         // Temporarily override config path for testing
         let config = Config::default();
@@ -1218,7 +1224,10 @@ timeout = 60
         let original = Config::default();
         let cloned = original.clone();
 
-        assert_eq!(original.general.default_quality, cloned.general.default_quality);
+        assert_eq!(
+            original.general.default_quality,
+            cloned.general.default_quality
+        );
         assert_eq!(original.audio.format, cloned.audio.format);
         assert_eq!(original.video.format, cloned.video.format);
         assert_eq!(original.network.timeout, cloned.network.timeout);

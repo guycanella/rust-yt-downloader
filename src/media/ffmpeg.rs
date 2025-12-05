@@ -31,8 +31,8 @@
 //! # Ok::<(), rust_yt_downloader::error::AppError>(())
 //! ```
 
-use std::process::{Command, Output};
 use std::path::Path;
+use std::process::{Command, Output};
 
 use crate::error::{AppError, AppResult};
 
@@ -102,10 +102,7 @@ impl FFmpeg {
         }
 
         let version_output = String::from_utf8_lossy(&output.stdout);
-        let first_line = version_output
-            .lines()
-            .next()
-            .unwrap_or("unknown version");
+        let first_line = version_output.lines().next().unwrap_or("unknown version");
 
         Ok(first_line.to_string())
     }
@@ -170,10 +167,7 @@ impl FFmpeg {
 
         if !output.status.success() {
             let stderr = String::from_utf8_lossy(&output.stderr);
-            return Err(AppError::ffmpeg(
-                stderr.to_string(),
-                output.status.code(),
-            ));
+            return Err(AppError::ffmpeg(stderr.to_string(), output.status.code()));
         }
 
         Ok(output)
@@ -233,11 +227,7 @@ impl FFmpeg {
         let input_str = input.as_ref().to_string_lossy();
         let output_str = output.as_ref().to_string_lossy();
 
-        Self::run_overwrite(&[
-            "-i", &input_str,
-            "-c", "copy",
-            &output_str,
-        ])?;
+        Self::run_overwrite(&["-i", &input_str, "-c", "copy", &output_str])?;
 
         Ok(())
     }
@@ -269,10 +259,7 @@ impl FFmpeg {
         let input_str = input.as_ref().to_string_lossy();
         let output_str = output.as_ref().to_string_lossy();
 
-        Self::run_overwrite(&[
-            "-i", &input_str,
-            &output_str,
-        ])?;
+        Self::run_overwrite(&["-i", &input_str, &output_str])?;
 
         Ok(())
     }
@@ -304,12 +291,7 @@ impl FFmpeg {
         let input_str = input.as_ref().to_string_lossy();
         let output_str = output.as_ref().to_string_lossy();
 
-        Self::run_overwrite(&[
-            "-i", &input_str,
-            "-vn",
-            "-acodec", "copy",
-            &output_str,
-        ])?;
+        Self::run_overwrite(&["-i", &input_str, "-vn", "-acodec", "copy", &output_str])?;
 
         Ok(())
     }
@@ -348,11 +330,7 @@ impl FFmpeg {
         let input_str = input.as_ref().to_string_lossy();
         let output_str = output.as_ref().to_string_lossy();
 
-        let mut args = vec![
-            "-i", &input_str,
-            "-vn",
-            "-acodec", codec,
-        ];
+        let mut args = vec!["-i", &input_str, "-vn", "-acodec", codec];
 
         let bitrate_str;
         if let Some(br) = bitrate {
@@ -393,20 +371,19 @@ impl FFmpeg {
     /// FFmpeg::trim("video.mp4", "clip.mp4", "00:01:30", "00:03:00")?;
     /// # Ok::<(), rust_yt_downloader::error::AppError>(())
     /// ```
-    pub fn trim<P: AsRef<Path>>(
-        input: P,
-        output: P,
-        start: &str,
-        end: &str,
-    ) -> AppResult<()> {
+    pub fn trim<P: AsRef<Path>>(input: P, output: P, start: &str, end: &str) -> AppResult<()> {
         let input_str = input.as_ref().to_string_lossy();
         let output_str = output.as_ref().to_string_lossy();
 
         Self::run_overwrite(&[
-            "-i", &input_str,
-            "-ss", start,
-            "-to", end,
-            "-c", "copy",
+            "-i",
+            &input_str,
+            "-ss",
+            start,
+            "-to",
+            end,
+            "-c",
+            "copy",
             &output_str,
         ])?;
 
@@ -447,12 +424,7 @@ impl FFmpeg {
         let input_str = input.as_ref().to_string_lossy();
         let output_str = output.as_ref().to_string_lossy();
 
-        Self::run_overwrite(&[
-            "-i", &input_str,
-            "-ss", start,
-            "-to", end,
-            &output_str,
-        ])?;
+        Self::run_overwrite(&["-i", &input_str, "-ss", start, "-to", end, &output_str])?;
 
         Ok(())
     }
@@ -488,8 +460,10 @@ impl FFmpeg {
 
         let output = Command::new("ffprobe")
             .args([
-                "-v", "quiet",
-                "-print_format", "json",
+                "-v",
+                "quiet",
+                "-print_format",
+                "json",
                 "-show_format",
                 "-show_streams",
                 &input_str,
@@ -755,7 +729,10 @@ mod tests {
 
     #[test]
     fn test_audio_bitrate_default_for_mp3() {
-        assert_eq!(AudioBitrate::default_for_format("mp3"), AudioBitrate::VERY_HIGH);
+        assert_eq!(
+            AudioBitrate::default_for_format("mp3"),
+            AudioBitrate::VERY_HIGH
+        );
     }
 
     #[test]
@@ -770,12 +747,18 @@ mod tests {
 
     #[test]
     fn test_audio_bitrate_default_for_opus() {
-        assert_eq!(AudioBitrate::default_for_format("opus"), AudioBitrate::MEDIUM);
+        assert_eq!(
+            AudioBitrate::default_for_format("opus"),
+            AudioBitrate::MEDIUM
+        );
     }
 
     #[test]
     fn test_audio_bitrate_default_for_ogg() {
-        assert_eq!(AudioBitrate::default_for_format("ogg"), AudioBitrate::MEDIUM);
+        assert_eq!(
+            AudioBitrate::default_for_format("ogg"),
+            AudioBitrate::MEDIUM
+        );
     }
 
     #[test]
@@ -785,8 +768,14 @@ mod tests {
 
     #[test]
     fn test_audio_bitrate_default_case_insensitive() {
-        assert_eq!(AudioBitrate::default_for_format("MP3"), AudioBitrate::VERY_HIGH);
-        assert_eq!(AudioBitrate::default_for_format("OPUS"), AudioBitrate::MEDIUM);
+        assert_eq!(
+            AudioBitrate::default_for_format("MP3"),
+            AudioBitrate::VERY_HIGH
+        );
+        assert_eq!(
+            AudioBitrate::default_for_format("OPUS"),
+            AudioBitrate::MEDIUM
+        );
     }
 
     // ============== FFmpeg Command Building Tests ==============
@@ -862,10 +851,7 @@ mod tests {
                 return;
             }
 
-            let result = FFmpeg::convert(
-                "/nonexistent/input.mp4",
-                "/nonexistent/output.mkv",
-            );
+            let result = FFmpeg::convert("/nonexistent/input.mp4", "/nonexistent/output.mkv");
             assert!(result.is_err());
         }
 
@@ -875,10 +861,7 @@ mod tests {
                 return;
             }
 
-            let result = FFmpeg::extract_audio(
-                "/nonexistent/input.mp4",
-                "/nonexistent/output.mp3",
-            );
+            let result = FFmpeg::extract_audio("/nonexistent/input.mp4", "/nonexistent/output.mp3");
             assert!(result.is_err());
         }
 
@@ -913,10 +896,7 @@ mod tests {
                 return;
             }
 
-            let result = FFmpeg::convert(
-                "/nonexistent/input.mp4",
-                "/nonexistent/output.mkv",
-            );
+            let result = FFmpeg::convert("/nonexistent/input.mp4", "/nonexistent/output.mkv");
 
             match result {
                 Err(AppError::FfmpegExecution { message, .. }) => {
@@ -946,12 +926,7 @@ mod tests {
         let input = "input.mp4";
         let output = "output.mp3";
 
-        let args = vec![
-            "-i", input,
-            "-vn",
-            "-acodec", "copy",
-            output,
-        ];
+        let args = vec!["-i", input, "-vn", "-acodec", "copy", output];
 
         assert_eq!(args[0], "-i");
         assert_eq!(args[2], "-vn");
@@ -965,11 +940,7 @@ mod tests {
         let codec = "libmp3lame";
         let bitrate = "320k";
 
-        let mut args = vec![
-            "-i", input,
-            "-vn",
-            "-acodec", codec,
-        ];
+        let mut args = vec!["-i", input, "-vn", "-acodec", codec];
 
         args.push("-b:a");
         args.push(bitrate);
@@ -986,13 +957,7 @@ mod tests {
         let start = "00:01:00";
         let end = "00:02:00";
 
-        let args = vec![
-            "-i", input,
-            "-ss", start,
-            "-to", end,
-            "-c", "copy",
-            output,
-        ];
+        let args = vec!["-i", input, "-ss", start, "-to", end, "-c", "copy", output];
 
         assert_eq!(args[2], "-ss");
         assert_eq!(args[3], start);

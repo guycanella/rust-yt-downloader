@@ -448,10 +448,11 @@ impl AudioExtractor {
         let input_path = input.as_ref();
         let stem = input_path.file_stem().unwrap_or_default();
 
-        input_path
-            .parent()
-            .unwrap_or(Path::new(""))
-            .join(format!("{}.{}", stem.to_string_lossy(), format.extension()))
+        input_path.parent().unwrap_or(Path::new("")).join(format!(
+            "{}.{}",
+            stem.to_string_lossy(),
+            format.extension()
+        ))
     }
 }
 
@@ -1033,15 +1034,15 @@ mod tests {
 
     #[test]
     fn test_output_path_with_spaces() {
-        let output =
-            AudioExtractor::output_path_with_format("my song file.wav", AudioFormat::Mp3);
+        let output = AudioExtractor::output_path_with_format("my song file.wav", AudioFormat::Mp3);
         assert!(output.to_string_lossy().contains("my song file"));
         assert!(output.to_string_lossy().ends_with(".mp3"));
     }
 
     #[test]
     fn test_output_path_with_unicode() {
-        let output = AudioExtractor::output_path_with_format("música_brasileira.wav", AudioFormat::Mp3);
+        let output =
+            AudioExtractor::output_path_with_format("música_brasileira.wav", AudioFormat::Mp3);
         assert!(output.to_string_lossy().contains("música_brasileira"));
     }
 
@@ -1188,10 +1189,8 @@ mod tests {
                 return;
             }
 
-            let result = AudioExtractor::extract_default(
-                "/nonexistent/video.mp4",
-                "/nonexistent/audio.mp3",
-            );
+            let result =
+                AudioExtractor::extract_default("/nonexistent/video.mp4", "/nonexistent/audio.mp3");
 
             assert!(result.is_err());
         }
@@ -1202,10 +1201,8 @@ mod tests {
                 return;
             }
 
-            let result = AudioExtractor::extract_as_mp3(
-                "/nonexistent/video.mp4",
-                "/nonexistent/audio.mp3",
-            );
+            let result =
+                AudioExtractor::extract_as_mp3("/nonexistent/video.mp4", "/nonexistent/audio.mp3");
 
             assert!(result.is_err());
         }

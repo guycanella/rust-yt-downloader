@@ -29,12 +29,12 @@
 //! # }
 //! ```
 
-pub mod metadata;
 pub mod client;
+pub mod metadata;
 pub mod playlist;
 pub mod ytdlp;
 
+pub use client::{validate_youtube_url, YouTubeClient};
 pub use metadata::{PlaylistInfo, QualityFilter, StreamInfo, VideoInfo};
-pub use client::{YouTubeClient, validate_youtube_url};
 pub use playlist::{extract_playlist_ids, filter_valid_playlist_urls, PlaylistClient};
 pub use ytdlp::YtDlpClient;

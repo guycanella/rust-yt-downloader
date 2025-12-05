@@ -16,7 +16,7 @@ pub const TEST_VIDEO_INVALID: &str = "https://www.youtube.com/watch?v=invalid123
 /// Runs the ytdl binary with the provided arguments
 pub fn run_ytdl(args: &[&str]) -> Output {
     let binary = get_binary_path();
-    
+
     Command::new(binary)
         .args(args)
         .output()

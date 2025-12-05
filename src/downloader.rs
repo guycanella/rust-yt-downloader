@@ -376,8 +376,12 @@ impl DownloadOptions {
             VideoQuality::Best => "bestvideo+bestaudio/best".to_string(),
             VideoQuality::Worst => "worstvideo+worstaudio/worst".to_string(),
             VideoQuality::Q4k => "bestvideo[height<=2160]+bestaudio/best[height<=2160]".to_string(),
-            VideoQuality::Q1440p => "bestvideo[height<=1440]+bestaudio/best[height<=1440]".to_string(),
-            VideoQuality::Q1080p => "bestvideo[height<=1080]+bestaudio/best[height<=1080]".to_string(),
+            VideoQuality::Q1440p => {
+                "bestvideo[height<=1440]+bestaudio/best[height<=1440]".to_string()
+            }
+            VideoQuality::Q1080p => {
+                "bestvideo[height<=1080]+bestaudio/best[height<=1080]".to_string()
+            }
             VideoQuality::Q720p => "bestvideo[height<=720]+bestaudio/best[height<=720]".to_string(),
             VideoQuality::Q480p => "bestvideo[height<=480]+bestaudio/best[height<=480]".to_string(),
             VideoQuality::Q360p => "bestvideo[height<=360]+bestaudio/best[height<=360]".to_string(),
@@ -577,8 +581,8 @@ impl Downloader {
     /// # }
     /// ```
     pub async fn download(&self, url: &str) -> AppResult<DownloadResult> {
-        use std::process::{Command, Stdio};
         use std::io::{BufRead, BufReader};
+        use std::process::{Command, Stdio};
 
         YtDlpClient::require()?;
 
@@ -601,7 +605,9 @@ impl Downloader {
         }
 
         // Monta o caminho de saída
-        let output_template = self.options.output_dir
+        let output_template = self
+            .options
+            .output_dir
             .join("%(title)s.%(ext)s")
             .to_string_lossy()
             .to_string();
@@ -616,9 +622,12 @@ impl Downloader {
 
         let mut args = vec![
             "--no-warnings",
-            "-f", &format_str,
-            "--merge-output-format", merge_format,
-            "-o", &output_template,
+            "-f",
+            &format_str,
+            "--merge-output-format",
+            merge_format,
+            "-o",
+            &output_template,
             "--no-playlist",
             "--restrict-filenames",
         ];
@@ -670,7 +679,8 @@ impl Downloader {
                 println!(); // Nova linha após o progresso
             }
 
-            let status = child.wait()
+            let status = child
+                .wait()
                 .map_err(|e| AppError::ExtractionFailed(e.to_string()))?;
 
             if !status.success() {
@@ -679,8 +689,11 @@ impl Downloader {
         }
 
         // Encontra o arquivo baixado
-        let actual_path = self.find_downloaded_file_by_ext(merge_format)
-            .ok_or_else(|| AppError::ExtractionFailed("Could not find downloaded file".to_string()))?;
+        let actual_path = self
+            .find_downloaded_file_by_ext(merge_format)
+            .ok_or_else(|| {
+                AppError::ExtractionFailed("Could not find downloaded file".to_string())
+            })?;
 
         let file_size = std::fs::metadata(&actual_path)
             .map(|m| m.len())
@@ -736,8 +749,8 @@ impl Downloader {
     /// # }
     /// ```
     pub async fn download_audio(&self, url: &str) -> AppResult<DownloadResult> {
-        use std::process::{Command, Stdio};
         use std::io::{BufRead, BufReader};
+        use std::process::{Command, Stdio};
 
         YtDlpClient::require()?;
 
@@ -759,7 +772,9 @@ impl Downloader {
         }
 
         // Monta o caminho de saída
-        let output_template = self.options.output_dir
+        let output_template = self
+            .options
+            .output_dir
             .join("%(title)s.%(ext)s")
             .to_string_lossy()
             .to_string();
@@ -773,8 +788,10 @@ impl Downloader {
         let mut args = vec![
             "--no-warnings",
             "-x",
-            "--audio-format", audio_format,
-            "-o", &output_template,
+            "--audio-format",
+            audio_format,
+            "-o",
+            &output_template,
             "--no-playlist",
             "--restrict-filenames",
         ];
@@ -826,17 +843,23 @@ impl Downloader {
                 println!(); // Nova linha após o progresso
             }
 
-            let status = child.wait()
+            let status = child
+                .wait()
                 .map_err(|e| AppError::ExtractionFailed(e.to_string()))?;
 
             if !status.success() {
-                return Err(AppError::ExtractionFailed("Audio extraction failed".to_string()));
+                return Err(AppError::ExtractionFailed(
+                    "Audio extraction failed".to_string(),
+                ));
             }
         }
 
         // Encontra o arquivo baixado
-        let actual_path = self.find_downloaded_file_by_ext(audio_format)
-            .ok_or_else(|| AppError::ExtractionFailed("Could not find downloaded file".to_string()))?;
+        let actual_path = self
+            .find_downloaded_file_by_ext(audio_format)
+            .ok_or_else(|| {
+                AppError::ExtractionFailed("Could not find downloaded file".to_string())
+            })?;
 
         let file_size = std::fs::metadata(&actual_path)
             .map(|m| m.len())
@@ -977,64 +1000,57 @@ mod tests {
 
     #[test]
     fn test_download_options_with_output_dir() {
-        let options = DownloadOptions::default()
-            .with_output_dir(PathBuf::from("/custom/path"));
+        let options = DownloadOptions::default().with_output_dir(PathBuf::from("/custom/path"));
 
         assert_eq!(options.output_dir, PathBuf::from("/custom/path"));
     }
 
     #[test]
     fn test_download_options_with_quality() {
-        let options = DownloadOptions::default()
-            .with_quality(VideoQuality::Q1080p);
+        let options = DownloadOptions::default().with_quality(VideoQuality::Q1080p);
 
         assert!(matches!(options.quality, VideoQuality::Q1080p));
     }
 
     #[test]
     fn test_download_options_with_video_format() {
-        let options = DownloadOptions::default()
-            .with_video_format(VideoFormat::Mkv);
+        let options = DownloadOptions::default().with_video_format(VideoFormat::Mkv);
 
         assert!(matches!(options.video_format, VideoFormat::Mkv));
     }
 
     #[test]
     fn test_download_options_with_audio_format() {
-        let options = DownloadOptions::default()
-            .with_audio_format(AudioFormat::Flac);
+        let options = DownloadOptions::default().with_audio_format(AudioFormat::Flac);
 
         assert!(matches!(options.audio_format, AudioFormat::Flac));
     }
 
     #[test]
     fn test_download_options_with_audio_only() {
-        let options = DownloadOptions::default()
-            .with_audio_only(true);
+        let options = DownloadOptions::default().with_audio_only(true);
 
         assert!(options.audio_only);
     }
 
     #[test]
     fn test_download_options_with_template() {
-        let options = DownloadOptions::default()
-            .with_template("%(title)s-%(id)s.%(ext)s".to_string());
+        let options =
+            DownloadOptions::default().with_template("%(title)s-%(id)s.%(ext)s".to_string());
 
         assert_eq!(options.filename_template, "%(title)s-%(id)s.%(ext)s");
     }
 
     #[test]
     fn test_download_options_with_silence() {
-        let options = DownloadOptions::default()
-            .with_silence(true);
+        let options = DownloadOptions::default().with_silence(true);
 
         assert!(options.silence);
     }
 
     #[test]
     fn test_download_options_with_verbose() {
-        let options = DownloadOptions::default()
-            .with_verbose(true);
+        let options = DownloadOptions::default().with_verbose(true);
 
         assert!(options.verbose);
     }
@@ -1130,9 +1146,18 @@ mod tests {
 
     #[test]
     fn test_parse_quality_case_insensitive() {
-        assert!(matches!(DownloadOptions::parse_quality("1080P"), VideoQuality::Q1080p));
-        assert!(matches!(DownloadOptions::parse_quality("BEST"), VideoQuality::Best));
-        assert!(matches!(DownloadOptions::parse_quality("4K"), VideoQuality::Q4k));
+        assert!(matches!(
+            DownloadOptions::parse_quality("1080P"),
+            VideoQuality::Q1080p
+        ));
+        assert!(matches!(
+            DownloadOptions::parse_quality("BEST"),
+            VideoQuality::Best
+        ));
+        assert!(matches!(
+            DownloadOptions::parse_quality("4K"),
+            VideoQuality::Q4k
+        ));
     }
 
     #[test]
@@ -1161,8 +1186,14 @@ mod tests {
 
     #[test]
     fn test_parse_video_format_case_insensitive() {
-        assert!(matches!(DownloadOptions::parse_video_format("MP4"), VideoFormat::Mp4));
-        assert!(matches!(DownloadOptions::parse_video_format("MKV"), VideoFormat::Mkv));
+        assert!(matches!(
+            DownloadOptions::parse_video_format("MP4"),
+            VideoFormat::Mp4
+        ));
+        assert!(matches!(
+            DownloadOptions::parse_video_format("MKV"),
+            VideoFormat::Mkv
+        ));
     }
 
     #[test]
@@ -1203,8 +1234,14 @@ mod tests {
 
     #[test]
     fn test_parse_audio_format_case_insensitive() {
-        assert!(matches!(DownloadOptions::parse_audio_format("MP3"), AudioFormat::Mp3));
-        assert!(matches!(DownloadOptions::parse_audio_format("FLAC"), AudioFormat::Flac));
+        assert!(matches!(
+            DownloadOptions::parse_audio_format("MP3"),
+            AudioFormat::Mp3
+        ));
+        assert!(matches!(
+            DownloadOptions::parse_audio_format("FLAC"),
+            AudioFormat::Flac
+        ));
     }
 
     #[test]
@@ -1381,15 +1418,17 @@ mod tests {
         let config = Config::default();
         let downloader = Downloader::from_config(&config);
 
-        assert_eq!(downloader.options().retry_attempts, config.network.retry_attempts);
+        assert_eq!(
+            downloader.options().retry_attempts,
+            config.network.retry_attempts
+        );
     }
 
     #[test]
     fn test_downloader_set_options() {
         let mut downloader = Downloader::new();
 
-        let new_options = DownloadOptions::default()
-            .with_quality(VideoQuality::Q480p);
+        let new_options = DownloadOptions::default().with_quality(VideoQuality::Q480p);
 
         downloader.set_options(new_options);
 
@@ -1417,15 +1456,16 @@ mod tests {
 
     #[test]
     fn test_multiple_downloader_instances() {
-        let downloader1 = Downloader::with_options(
-            DownloadOptions::default().with_quality(VideoQuality::Q720p)
-        );
-        let downloader2 = Downloader::with_options(
-            DownloadOptions::default().with_quality(VideoQuality::Q1080p)
-        );
+        let downloader1 =
+            Downloader::with_options(DownloadOptions::default().with_quality(VideoQuality::Q720p));
+        let downloader2 =
+            Downloader::with_options(DownloadOptions::default().with_quality(VideoQuality::Q1080p));
 
         assert!(matches!(downloader1.options().quality, VideoQuality::Q720p));
-        assert!(matches!(downloader2.options().quality, VideoQuality::Q1080p));
+        assert!(matches!(
+            downloader2.options().quality,
+            VideoQuality::Q1080p
+        ));
     }
 
     // ============== Clone Tests ==============
@@ -1508,11 +1548,7 @@ mod tests {
 
     #[test]
     fn test_all_video_format_variants() {
-        let formats = vec![
-            VideoFormat::Mp4,
-            VideoFormat::Mkv,
-            VideoFormat::Webm,
-        ];
+        let formats = vec![VideoFormat::Mp4, VideoFormat::Mkv, VideoFormat::Webm];
 
         for format in formats {
             let options = DownloadOptions::default().with_video_format(format);

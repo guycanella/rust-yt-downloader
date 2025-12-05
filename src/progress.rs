@@ -100,7 +100,7 @@
 //! ```
 
 use crate::error::{AppError, AppResult};
-use indicatif::{ProgressBar, MultiProgress, ProgressStyle};
+use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
 use std::time::Duration;
 
 /// Collection of pre-configured progress bar styles using indicatif templates.
