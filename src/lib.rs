@@ -13,12 +13,11 @@
 //! # Examples
 //!
 //! ```no_run
-//! use rust_yt_downloader::youtube::YouTubeClient;
-//! use rust_yt_downloader::downloader::Downloader;
+//! use rust_yt_downloader::YtDlpClient;
 //!
-//! # async fn example() -> Result<(), Box<dyn std::error::Error>> {
-//! let client = YouTubeClient::new();
-//! let info = client.get_video_info("https://www.youtube.com/watch?v=dQw4w9WgXcQ").await?;
+//! # fn example() -> Result<(), Box<dyn std::error::Error>> {
+//! let client = YtDlpClient::new();
+//! let info = client.get_video_info("https://www.youtube.com/watch?v=dQw4w9WgXcQ")?;
 //!
 //! println!("Title: {}", info.title);
 //! println!("Duration: {} seconds", info.duration);
@@ -50,4 +49,4 @@ pub mod youtube;
 pub use config::Config;
 pub use downloader::Downloader;
 pub use error::{AppError, AppResult};
-pub use youtube::YouTubeClient;
+pub use youtube::YtDlpClient;

@@ -1,40 +1,33 @@
 //! YouTube integration module for video and playlist operations.
 //!
-//! This module provides a comprehensive interface for interacting with YouTube,
-//! supporting both the rustube library and yt-dlp command-line tool. It handles
-//! video metadata extraction, playlist processing, URL validation, and stream
-//! information retrieval.
+//! This module provides a comprehensive interface for interacting with YouTube
+//! using the yt-dlp command-line tool. It handles video metadata extraction,
+//! playlist processing, URL validation, and stream information retrieval.
 //!
 //! # Modules
 //!
 //! - [`metadata`] - Data structures for video and playlist information
-//! - [`client`] - YouTube client using the rustube library
 //! - [`playlist`] - Playlist URL validation and video ID extraction
-//! - [`ytdlp`] - Integration with yt-dlp command-line tool
+//! - [`ytdlp`] - Integration with yt-dlp command-line tool (primary client)
 //!
 //! # Examples
 //!
 //! ```no_run
-//! use rust_yt_downloader::youtube::{YouTubeClient, validate_youtube_url};
+//! use rust_yt_downloader::youtube::YtDlpClient;
 //!
-//! # async fn example() -> Result<(), Box<dyn std::error::Error>> {
-//! // Validate a YouTube URL
-//! validate_youtube_url("https://www.youtube.com/watch?v=dQw4w9WgXcQ")?;
-//!
-//! // Get video information
-//! let client = YouTubeClient::new();
-//! let info = client.get_video_info("https://www.youtube.com/watch?v=dQw4w9WgXcQ").await?;
+//! # fn example() -> Result<(), Box<dyn std::error::Error>> {
+//! // Get video information using yt-dlp
+//! let client = YtDlpClient::new();
+//! let info = client.get_video_info("https://www.youtube.com/watch?v=dQw4w9WgXcQ")?;
 //! println!("Title: {}", info.title);
 //! # Ok(())
 //! # }
 //! ```
 
-pub mod client;
 pub mod metadata;
 pub mod playlist;
 pub mod ytdlp;
 
-pub use client::{validate_youtube_url, YouTubeClient};
 pub use metadata::{PlaylistInfo, QualityFilter, StreamInfo, VideoInfo};
 pub use playlist::{extract_playlist_ids, filter_valid_playlist_urls, PlaylistClient};
 pub use ytdlp::YtDlpClient;

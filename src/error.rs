@@ -131,9 +131,6 @@ pub enum AppError {
     #[error("Failed to extract video info: {0}")]
     ExtractionFailed(String),
 
-    /// Generic YouTube API error from rustube.
-    #[error("YouTube error: {0}")]
-    YouTube(#[from] rustube::Error),
 
     // ============== Filesystem Errors ==============
     /// Failed to read a file from disk.
