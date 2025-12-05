@@ -749,6 +749,8 @@ impl Default for MultiDownloadProgress {
 /// ```no_run
 /// use rust_yt_downloader::progress::messages;
 ///
+/// # struct Video { filename: String }
+/// # let videos: Vec<Video> = vec![];
 /// messages::info("Processing playlist with 10 videos");
 ///
 /// for video in videos {
@@ -756,8 +758,6 @@ impl Default for MultiDownloadProgress {
 ///     // ... download video ...
 ///     messages::success(&format!("{} downloaded", video.filename));
 /// }
-/// # struct Video { filename: String }
-/// # let videos: Vec<Video> = vec![];
 /// ```
 pub mod messages {
     use colored::Colorize;
@@ -810,9 +810,9 @@ pub mod messages {
     /// ```no_run
     /// use rust_yt_downloader::progress::messages;
     ///
+    /// # let url = "invalid";
     /// messages::error("Network connection lost");
     /// messages::error(&format!("Invalid URL: {}", url));
-    /// # let url = "invalid";
     /// ```
     pub fn error(msg: &str) {
         eprintln!("{} {}", "✗".red().bold(), msg);
@@ -865,9 +865,9 @@ pub mod messages {
     /// ```no_run
     /// use rust_yt_downloader::progress::messages;
     ///
+    /// # let count = 5;
     /// messages::info("Fetching playlist metadata...");
     /// messages::info(&format!("Found {} videos in playlist", count));
-    /// # let count = 5;
     /// ```
     pub fn info(msg: &str) {
         println!("{} {}", "ℹ".blue().bold(), msg);

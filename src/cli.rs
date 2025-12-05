@@ -14,7 +14,7 @@
 //!
 //! ```rust,no_run
 //! use clap::Parser;
-//! use rust_yt_downloader::cli::Cli;
+//! use rust_yt_downloader::cli::{Cli, Commands};
 //!
 //! let cli = Cli::parse();
 //! match cli.command {

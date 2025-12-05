@@ -58,7 +58,7 @@ use thiserror::Error;
 /// # Examples
 ///
 /// ```rust
-/// use rust_yt_downloader::error::AppResult;
+/// use rust_yt_downloader::error::{AppError, AppResult};
 ///
 /// fn parse_quality(s: &str) -> AppResult<u32> {
 ///     s.parse().map_err(|_| AppError::invalid_arg("quality", "must be a number"))
