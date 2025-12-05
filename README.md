@@ -40,8 +40,14 @@ cargo install --path .
 
 ### Dependencies
 
-**FFmpeg** is required for audio extraction and format conversion:
+This tool requires two external dependencies:
 
+**1. yt-dlp** (required) - Used for downloading YouTube content:
+- **Linux**: `sudo apt install yt-dlp` or download from [yt-dlp releases](https://github.com/yt-dlp/yt-dlp/releases)
+- **macOS**: `brew install yt-dlp`
+- **Windows**: `choco install yt-dlp` or `winget install yt-dlp`
+
+**2. FFmpeg** (required) - Used for audio extraction and format conversion:
 - **Linux**: `sudo apt-get install ffmpeg`
 - **macOS**: `brew install ffmpeg`
 - **Windows**: `choco install ffmpeg` or download from [ffmpeg.org](https://ffmpeg.org)

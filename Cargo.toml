@@ -3,12 +3,21 @@ name = "rust-yt-downloader"
 version = "0.1.0"
 edition = "2021"
 authors = ["Guilherme Arantes Canella <guycanella@gmail.com>"]
-description = "A professional CLI tool for downloading YouTube videos"
+description = "A professional CLI tool for downloading YouTube videos and audio with quality selection, format conversion, and playlist support"
 license = "MIT"
-repository = "https://github.com/seu-usuario/rust-yt-downloader"
+repository = "https://github.com/guycanella/rust-yt-downloader"
+homepage = "https://github.com/guycanella/rust-yt-downloader"
+documentation = "https://docs.rs/rust-yt-downloader"
+readme = "README.md"
 keywords = ["youtube", "downloader", "cli", "video", "audio"]
 categories = ["command-line-utilities", "multimedia"]
 rust-version = "1.75.0"
+exclude = [
+    ".github/*",
+    "tests/*",
+    "CLAUDE.md",
+    "CONFIGURATION_DEPENDENCY.md",
+]
 
 [dependencies]
 # CLI & User Interface
