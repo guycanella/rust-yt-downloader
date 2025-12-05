@@ -16,10 +16,10 @@ use serde::{Deserialize, Serialize};
 /// # Examples
 ///
 /// ```no_run
-/// # use rust_yt_downloader::youtube::{YouTubeClient, QualityFilter};
-/// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
-/// let client = YouTubeClient::new();
-/// let info = client.get_video_info("https://www.youtube.com/watch?v=dQw4w9WgXcQ").await?;
+/// # use rust_yt_downloader::youtube::{YtDlpClient, QualityFilter};
+/// # fn example() -> Result<(), Box<dyn std::error::Error>> {
+/// let client = YtDlpClient::new();
+/// let info = client.get_video_info("https://www.youtube.com/watch?v=dQw4w9WgXcQ")?;
 ///
 /// println!("Title: {}", info.title);
 /// println!("Duration: {} seconds", info.duration);
@@ -62,14 +62,15 @@ pub struct VideoInfo {
 /// # Examples
 ///
 /// ```no_run
-/// # use rust_yt_downloader::youtube::YouTubeClient;
-/// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
-/// let client = YouTubeClient::new();
-/// let streams = client.get_streams("https://www.youtube.com/watch?v=dQw4w9WgXcQ").await?;
+/// # use rust_yt_downloader::youtube::YtDlpClient;
+/// # fn example() -> Result<(), Box<dyn std::error::Error>> {
+/// let client = YtDlpClient::new();
+/// let info = client.get_video_info("https://www.youtube.com/watch?v=dQw4w9WgXcQ")?;
 ///
-/// for stream in &streams {
+/// println!("Available streams: {}", info.streams.len());
+/// for stream in &info.streams {
 ///     if !stream.is_audio_only {
-///         println!("{} - {}", stream.quality, stream.description());
+///         println!("{} - {}", stream.quality, stream.format);
 ///     }
 /// }
 /// # Ok(())
@@ -153,10 +154,10 @@ impl VideoInfo {
     /// # Examples
     ///
     /// ```no_run
-    /// # use rust_yt_downloader::youtube::YouTubeClient;
-    /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
-    /// let client = YouTubeClient::new();
-    /// let info = client.get_video_info("https://www.youtube.com/watch?v=dQw4w9WgXcQ").await?;
+    /// # use rust_yt_downloader::youtube::YtDlpClient;
+    /// # fn example() -> Result<(), Box<dyn std::error::Error>> {
+    /// let client = YtDlpClient::new();
+    /// let info = client.get_video_info("https://www.youtube.com/watch?v=dQw4w9WgXcQ")?;
     ///
     /// if let Some(best) = info.best_video_stream() {
     ///     println!("Best quality: {}", best.quality);
@@ -221,10 +222,10 @@ impl VideoInfo {
     /// # Examples
     ///
     /// ```no_run
-    /// # use rust_yt_downloader::youtube::{YouTubeClient, QualityFilter};
-    /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
-    /// let client = YouTubeClient::new();
-    /// let info = client.get_video_info("https://www.youtube.com/watch?v=dQw4w9WgXcQ").await?;
+    /// # use rust_yt_downloader::youtube::{YtDlpClient, QualityFilter};
+    /// # fn example() -> Result<(), Box<dyn std::error::Error>> {
+    /// let client = YtDlpClient::new();
+    /// let info = client.get_video_info("https://www.youtube.com/watch?v=dQw4w9WgXcQ")?;
     ///
     /// // Get best quality up to 720p
     /// if let Some(stream) = info.stream_by_filter(QualityFilter::MaxHeight(720)) {

@@ -131,7 +131,6 @@ pub enum AppError {
     #[error("Failed to extract video info: {0}")]
     ExtractionFailed(String),
 
-
     // ============== Filesystem Errors ==============
     /// Failed to read a file from disk.
     #[error("Failed to read file: {path}")]
